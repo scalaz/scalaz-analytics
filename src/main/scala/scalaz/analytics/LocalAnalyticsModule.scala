@@ -8,31 +8,38 @@ import scalaz.zio.IO
 trait LocalAnalyticsModule extends AnalyticsModule {
   override type DataStream[A] = LocalDataStream
   override type Type[A] = TypeTypeclass[A]
-  override type NumericType[A] = NumericTypeTypeclass[A]
   override type Unknown = UnknownType
   type UnknownType
   override type =>:[-A, +B] = RowFunction
 
+  private object Nums {
+    def apply[A: Type]: Num[A] =
+      new Num[A] {
+        override val typeOf = Type[A]
+        override def mult: (A, A) =>: A = RowFunction.Mult(Type[A].reified)
+        override def sum: (A, A) =>: A = RowFunction.Sum(Type[A].reified)
+        override def diff: (A, A) =>: A = RowFunction.Diff(Type[A].reified)
+        override def mod: (A, A) =>: A = RowFunction.Mod(Type[A].reified)
+      }
+  }
+
   override implicit val unknown: Type[Unknown] = new Type[Unknown] {
-    override def typeof: ReifiedType = ReifiedType.Unknown
+    override def reified: ReifiedType = ReifiedType.Unknown
   }
-  override implicit val intNumeric: NumericType[scala.Int] = new NumericType[scala.Int] {
-    override def typeof: NumericReifiedType = ReifiedType.Int
-  }
-  override implicit val longNumeric: NumericType[scala.Long] = new NumericType[scala.Long] {
-    override def typeof: NumericReifiedType = ReifiedType.Long
-  }
-  override implicit val floatNumeric: NumericType[scala.Float] = new NumericType[scala.Float] {
-    override def typeof: NumericReifiedType = ReifiedType.Float
-  }
-  override implicit val doubleNumeric: NumericType[scala.Double] = new NumericType[scala.Double] {
-    override def typeof: NumericReifiedType = ReifiedType.Double
-  }
+  override implicit val intType: Type[scala.Int] = ReifiedType(ReifiedType.Int)
+  override implicit val intNumeric: Num[scala.Int] = Nums[Int]
+
+  override implicit val longType: Type[scala.Long] = ReifiedType(ReifiedType.Long)
+  override implicit val longNumeric: Num[scala.Long] = Nums[scala.Long]
+
+  override implicit val floatType: Type[scala.Float] = ReifiedType(ReifiedType.Float)
+  override implicit val floatNumeric: Num[scala.Float] =  Nums[scala.Float]
+
+  override implicit val doubleType: Type[scala.Double] = ReifiedType(ReifiedType.Double)
+  override implicit val doubleNumeric: Num[scala.Double] =  Nums[scala.Double]
+
   override implicit def tuple2Type[A: Type, B: Type]: Type[(A, B)] = new Type[(A, B)] {
-    override def typeof: ReifiedType = ReifiedType.Tuple2(TypeTypeclass.typeof[A], TypeTypeclass.typeof[B])
-  }
-  override implicit def numericType[A: NumericType]: Type[A] = new Type[A] {
-    override def typeof: ReifiedType = NumericTypeTypeclass.typeof[A]
+    override def reified: ReifiedType = ReifiedType.Tuple2(TypeTypeclass.typeof[A], TypeTypeclass.typeof[B])
   }
 
 
@@ -40,22 +47,11 @@ trait LocalAnalyticsModule extends AnalyticsModule {
     * A typeclass that produces a ReifiedType
     */
   sealed trait TypeTypeclass[A] {
-    def typeof: ReifiedType
+    def reified: ReifiedType
   }
   object TypeTypeclass {
-    def typeof[A](implicit ev: TypeTypeclass[A]): ReifiedType = ev.typeof
+    def typeof[A](implicit ev: TypeTypeclass[A]): ReifiedType = ev.reified
   }
-
-  /**
-    * A typeclass that produces a NumericReifiedType
-    */
-  sealed trait NumericTypeTypeclass[A] extends TypeTypeclass[A] {
-    override def typeof: NumericReifiedType
-  }
-  object NumericTypeTypeclass {
-    def typeof[A](implicit ev: NumericTypeTypeclass[A]): NumericReifiedType = ev.typeof
-  }
-
 
   /**
     * The set of reified types.
@@ -63,12 +59,17 @@ trait LocalAnalyticsModule extends AnalyticsModule {
     */
   sealed trait ReifiedType
   object ReifiedType {
-    case object Int extends NumericReifiedType
-    case object Long extends NumericReifiedType
-    case object Float extends NumericReifiedType
-    case object Double extends NumericReifiedType
+    private[LocalAnalyticsModule] def apply[A](r: ReifiedType): Type[A] =
+      new Type[A] {
+        override def reified: ReifiedType = r
+      }
+
+    case object Int extends ReifiedType
+    case object Long extends ReifiedType
+    case object Float extends ReifiedType
+    case object Double extends ReifiedType
     case object String extends ReifiedType
-    case object Decimal extends NumericReifiedType
+    case object Decimal extends ReifiedType
     case object Unknown extends ReifiedType
     case class Tuple2(a: ReifiedType, b: ReifiedType) extends ReifiedType
   }
@@ -120,10 +121,10 @@ trait LocalAnalyticsModule extends AnalyticsModule {
   object RowFunction {
     case class Id(reifiedType: ReifiedType) extends RowFunction
     case class Compose(left: RowFunction, right: RowFunction) extends RowFunction
-    case class Mult(typ: NumericReifiedType) extends RowFunction
-    case class Sum(typ: NumericReifiedType) extends RowFunction
-    case class Diff(typ: NumericReifiedType) extends RowFunction
-    case class Mod(typ: NumericReifiedType) extends RowFunction
+    case class Mult[A](typ: ReifiedType) extends RowFunction
+    case class Sum(typ: ReifiedType) extends RowFunction
+    case class Diff(typ: ReifiedType) extends RowFunction
+    case class Mod[A](typ: ReifiedType) extends RowFunction
     case class FanOut(fst: RowFunction, snd: RowFunction) extends RowFunction
     case class Split(f: RowFunction, g: RowFunction) extends RowFunction
     case class Product(fab: RowFunction) extends RowFunction
@@ -141,30 +142,22 @@ trait LocalAnalyticsModule extends AnalyticsModule {
   override val stdLib: StandardLibrary = new StandardLibrary {
     override def id[A: Type]: A =>: A = RowFunction.Id(TypeTypeclass.typeof[A])
 
-    override def compose[A: Type, B: Type, C: Type](f: B =>: C, g: A =>: B): A =>: C = RowFunction.Compose(f, g)
+    override def compose[A, B, C](f: B =>: C, g: A =>: B): A =>: C = RowFunction.Compose(f, g)
 
-    override def andThen[A: Type, B: Type, C: Type](f: A =>: B, g: B =>: C): A =>: C = RowFunction.Compose(g, f)
+    override def andThen[A, B, C](f: A =>: B, g: B =>: C): A =>: C = RowFunction.Compose(g, f)
 
-    override def mult[A: NumericType]: (A, A) =>: A = RowFunction.Mult(NumericTypeTypeclass.typeof[A])
+    override def fanOut[A, B, C](fst: A =>: B, snd: A =>: C): A =>: (B, C) = RowFunction.FanOut(fst, snd)
 
-    override def sum[A: NumericType]: (A, A) =>: A = RowFunction.Sum(NumericTypeTypeclass.typeof[A])
+    override def split[A, B, C, D](f: A =>: B, g: C =>: D): (A, C) =>: (B, D) = RowFunction.Split(f, g)
 
-    override def diff[A: NumericType]: (A, A) =>: A = RowFunction.Diff(NumericTypeTypeclass.typeof[A])
+    override def product[A, B](fab: A =>: B): (A, A) =>: (B, B) = RowFunction.Product(fab)
 
-    override def mod[A: NumericType]: (A, A) =>: A = RowFunction.Mod(NumericTypeTypeclass.typeof[A])
-
-    override def fanOut[A: Type, B: Type, C: Type](fst: A =>: B, snd: A =>: C): A =>: (B, C) = RowFunction.FanOut(fst, snd)
-
-    override def split[A: Type, B: Type, C: Type, D: Type](f: A =>: B, g: C =>: D): (A, C) =>: (B, D) = RowFunction.Split(f, g)
-
-    override def product[A: Type, B: Type](fab: A =>: B): (A, A) =>: (B, B) = RowFunction.Product(fab)
-
-    override def int[A: Type](v: scala.Int): A =>: Int = RowFunction.IntLiteral(v)
-    override def long[A: Type](v: scala.Long): A =>: Long = RowFunction.LongLiteral(v)
-    override def float[A: Type](v: scala.Float): A =>: Float = RowFunction.FloatLiteral(v)
-    override def double[A: Type](v: scala.Double): A =>: Double = RowFunction.DoubleLiteral(v)
-    override def decimal[A: Type](v: scala.BigDecimal): A =>: BigDecimal = RowFunction.DecimalLiteral(v)
-    override def string[A: Type](v: scala.Predef.String): A =>: String = RowFunction.StringLiteral(v)
+    override def int[A](v: scala.Int): A =>: Int = RowFunction.IntLiteral(v)
+    override def long[A](v: scala.Long): A =>: Long = RowFunction.LongLiteral(v)
+    override def float[A](v: scala.Float): A =>: Float = RowFunction.FloatLiteral(v)
+    override def double[A](v: scala.Double): A =>: Double = RowFunction.DoubleLiteral(v)
+    override def decimal[A](v: scala.BigDecimal): A =>: BigDecimal = RowFunction.DecimalLiteral(v)
+    override def string[A](v: scala.Predef.String): A =>: String = RowFunction.StringLiteral(v)
 
     // todo this needs more thought
     override def column[A: Type](str: String): Unknown =>: A = RowFunction.Column(str, TypeTypeclass.typeof[A])
