@@ -2,20 +2,19 @@ package scalaz.analytics
 
 import scalaz.zio.IO
 
-
 /**
-  * An analytics module defined the abstract components required to build a reified program description.
-  */
+ * An analytics module defined the abstract components required to build a reified program description.
+ */
 trait AnalyticsModule {
 
   /**
-    * An abstract DataStream.
-    */
+   * An abstract DataStream.
+   */
   type DataStream[_]
 
   /**
-    * The set of types that are representable in this module.
-    */
+   * The set of types that are representable in this module.
+   */
   type Type[_]
 
   object Type {
@@ -23,13 +22,13 @@ trait AnalyticsModule {
   }
 
   /**
-    * A type that represents an Unknown Schema for some Data.
-    */
+   * A type that represents an Unknown Schema for some Data.
+   */
   type Unknown
 
   /**
-    * Proofs that the various types are [[Type]]s.
-    */
+   * Proofs that the various types are [[Type]]s.
+   */
   implicit val unknown: Type[Unknown]
 
   implicit val intType: Type[Int]
@@ -47,28 +46,28 @@ trait AnalyticsModule {
   implicit def tuple2Type[A: Type, B: Type]: Type[(A, B)]
 
   /**
-    * An Arrow between A and B.
-    * Arrows allow us to define abstract pipelines in scalaz-analytics.
-    */
+   * An Arrow between A and B.
+   * Arrows allow us to define abstract pipelines in scalaz-analytics.
+   */
   type =>:[-A, +B]
 
   /**
-    * Syntax a user can use to build their pipelines
-    */
+   * Syntax a user can use to build their pipelines
+   */
   implicit class FunctionSyntax[A, B](self: A =>: B) {
     def andThen[C](that: B =>: C): A =>: C = stdLib.compose(that, self)
-    def >>>[C](that: B =>: C): A =>: C = andThen(that)
+    def >>> [C](that: B =>: C): A =>: C    = andThen(that)
 
     def compose[C](that: C =>: A): C =>: B = stdLib.compose(self, that)
-    def <<<[C](that: C =>: A): C =>: B = compose(that)
+    def <<< [C](that: C =>: A): C =>: B    = compose(that)
 
     def combine[C](that: A =>: C): A =>: (B, C) = stdLib.fanOut(self, that)
-    def &&&[C](that: A =>: C): A =>: (B, C) = stdLib.fanOut(self, that)
+    def &&& [C](that: A =>: C): A =>: (B, C)    = stdLib.fanOut(self, that)
   }
 
   /**
-    * The Operations supported by the core DataStream abstraction in scalaz-analytics.
-    */
+   * The Operations supported by the core DataStream abstraction in scalaz-analytics.
+   */
   trait SetOperations {
     def empty[A: Type]: DataStream[A]
     def union[A: Type](l: DataStream[A], r: DataStream[A]): DataStream[A]
@@ -83,8 +82,8 @@ trait AnalyticsModule {
   }
 
   /**
-    * The standard library of scalaz-analytics.
-    */
+   * The standard library of scalaz-analytics.
+   */
   trait StandardLibrary {
     def id[A: Type]: A =>: A
 
@@ -93,7 +92,7 @@ trait AnalyticsModule {
 
     def fanOut[A, B, C](fst: A =>: B, snd: A =>: C): A =>: (B, C)
 
-    def split[A, B, C, D](f: A =>: B, g: C =>: D): (A,  C) =>: (B, D)
+    def split[A, B, C, D](f: A =>: B, g: C =>: D): (A, C) =>: (B, D)
 
     def product[A, B](fab: A =>: B): (A, A) =>: (B, B)
 
@@ -115,16 +114,18 @@ trait AnalyticsModule {
     def diff: (A, A) =>: A
     def mod: (A, A) =>: A
   }
+
   object Num {
     def apply[A: Num]: Num[A] = implicitly[Num[A]]
   }
 
   /**
-    * A DSL for numeric operations
-    */
+   * A DSL for numeric operations
+   */
   implicit class NumericSyntax[A, B](val l: A =>: B) {
+
     def * (r: A =>: B)(implicit B: Num[B]): A =>: B =
-      (l combine r) andThen B.mult
+      (l.combine(r)).andThen(B.mult)
 
     def + (r: A =>: B)(implicit B: Num[B]): A =>: B =
       (l &&& r) >>> B.sum
@@ -137,9 +138,10 @@ trait AnalyticsModule {
   }
 
   /**
-    * A DSL for building the DataStream data structure in a manner familiar to libraries like Spark/Flink etc
-    */
+   * A DSL for building the DataStream data structure in a manner familiar to libraries like Spark/Flink etc
+   */
   implicit class DataStreamSyntax[A](d: DataStream[A])(implicit A: Type[A]) {
+
     def map[B: Type](f: (A =>: A) => (A =>: B)): DataStream[B] =
       setOps.map(d)(f(stdLib.id))
 
@@ -150,19 +152,18 @@ trait AnalyticsModule {
   val setOps: SetOperations
   val stdLib: StandardLibrary
 
-
   /**
-    * Described a transformation from some Unknown Column type to a concrete Type
-    */
+   * Described a transformation from some Unknown Column type to a concrete Type
+   */
   def column[A: Type](str: String): Unknown =>: A = stdLib.column(str)(implicitly[Type[A]])
 
   /**
-    * Loads a [[DataStream]] without type information
-    */
+   * Loads a [[DataStream]] without type information
+   */
   def load(path: String): DataStream[Unknown]
 
   /**
-    * Execute the [[DataStream]]
-    */
+   * Execute the [[DataStream]]
+   */
   def run[A: Type](d: DataStream[A]): IO[Error, Seq[A]]
 }
