@@ -70,15 +70,15 @@ trait AnalyticsModule {
    */
   trait SetOperations {
     def empty[A: Type]: DataStream[A]
-    def union[A: Type](l: DataStream[A], r: DataStream[A]): DataStream[A]
-    def intersect[A: Type](l: DataStream[A], r: DataStream[A]): DataStream[A]
+    def union[A](l: DataStream[A], r: DataStream[A]): DataStream[A]
+    def intersect[A](l: DataStream[A], r: DataStream[A]): DataStream[A]
 
-    def except[A: Type](l: DataStream[A], r: DataStream[A]): DataStream[A]
+    def except[A](l: DataStream[A], r: DataStream[A]): DataStream[A]
 
-    def distinct[A: Type](d: DataStream[A]): DataStream[A]
-    def map[A: Type, B: Type](d: DataStream[A])(f: A =>: B): DataStream[B]
-    def sort[A: Type](d: DataStream[A]): DataStream[A]
-    def distinctBy[A: Type, B: Type](d: DataStream[A])(by: A =>: B): DataStream[A]
+    def distinct[A](d: DataStream[A]): DataStream[A]
+    def map[A, B](d: DataStream[A])(f: A =>: B): DataStream[B]
+    def sort[A](d: DataStream[A]): DataStream[A]
+    def distinctBy[A, B](d: DataStream[A])(by: A =>: B): DataStream[A]
   }
 
   /**
@@ -123,18 +123,10 @@ trait AnalyticsModule {
    * A DSL for numeric operations
    */
   implicit class NumericSyntax[A, B](val l: A =>: B) {
-
-    def * (r: A =>: B)(implicit B: Num[B]): A =>: B =
-      (l.combine(r)).andThen(B.mult)
-
-    def + (r: A =>: B)(implicit B: Num[B]): A =>: B =
-      (l &&& r) >>> B.sum
-
-    def - (r: A =>: B)(implicit B: Num[B]): A =>: B =
-      (l &&& r) >>> B.diff
-
-    def % (r: A =>: B)(implicit B: Num[B]): A =>: B =
-      (l &&& r) >>> B.mod
+    def * (r: A =>: B)(implicit B: Num[B]): A =>: B = (l &&& r) >>> B.mult
+    def + (r: A =>: B)(implicit B: Num[B]): A =>: B = (l &&& r) >>> B.sum
+    def - (r: A =>: B)(implicit B: Num[B]): A =>: B = (l &&& r) >>> B.diff
+    def % (r: A =>: B)(implicit B: Num[B]): A =>: B = (l &&& r) >>> B.mod
   }
 
   /**

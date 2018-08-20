@@ -9,8 +9,8 @@ trait LocalAnalyticsModule extends AnalyticsModule {
   override type DataStream[A] = LocalDataStream
   override type Type[A]       = LocalType[A]
   override type Unknown       = UnknownType
+  override type =>:[-A, +B]   = RowFunction
   type UnknownType
-  override type =>:[-A, +B] = RowFunction
 
   private object LocalNum {
 
@@ -97,25 +97,25 @@ trait LocalAnalyticsModule extends AnalyticsModule {
     override def empty[A: Type]: LocalDataStream =
       LocalDataStream.Empty(LocalType.typeof[A])
 
-    override def union[A: Type](l: LocalDataStream, r: LocalDataStream): LocalDataStream =
+    override def union[A](l: LocalDataStream, r: LocalDataStream): LocalDataStream =
       LocalDataStream.Union(l, r)
 
-    override def intersect[A: Type](l: LocalDataStream, r: LocalDataStream): LocalDataStream =
+    override def intersect[A](l: LocalDataStream, r: LocalDataStream): LocalDataStream =
       LocalDataStream.Intersect(l, r)
 
-    override def except[A: Type](l: LocalDataStream, r: LocalDataStream): LocalDataStream =
+    override def except[A](l: LocalDataStream, r: LocalDataStream): LocalDataStream =
       LocalDataStream.Except(l, r)
 
-    override def distinct[A: Type](d: LocalDataStream): LocalDataStream =
+    override def distinct[A](d: LocalDataStream): LocalDataStream =
       LocalDataStream.Distinct(d)
 
-    override def map[A: Type, B: Type](d: LocalDataStream)(f: A =>: B): LocalDataStream =
+    override def map[A, B](d: LocalDataStream)(f: A =>: B): LocalDataStream =
       LocalDataStream.Map[A, B](d, f)
 
-    override def sort[A: Type](d: LocalDataStream): LocalDataStream =
+    override def sort[A](d: LocalDataStream): LocalDataStream =
       LocalDataStream.Sort(d)
 
-    override def distinctBy[A: Type, B: Type](d: LocalDataStream)(by: A =>: B): LocalDataStream =
+    override def distinctBy[A, B](d: LocalDataStream)(by: A =>: B): LocalDataStream =
       LocalDataStream.DistinctBy[A, B](d, by)
   }
 
@@ -175,5 +175,5 @@ trait LocalAnalyticsModule extends AnalyticsModule {
 
   def load(path: String): DataStream[Unknown] = ???
 
-  def run[A: Type](d: DataStream[A]): IO[Error, Seq[A]] = ???
+  def run[A](d: DataStream[A]): IO[Error, Seq[A]] = ???
 }
