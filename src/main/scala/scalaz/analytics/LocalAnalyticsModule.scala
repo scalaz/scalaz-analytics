@@ -96,21 +96,29 @@ trait LocalAnalyticsModule extends AnalyticsModule {
   }
 
   override val setOps: SetOperations = new SetOperations {
-    override def empty[A: Type]: LocalDataStream = LocalDataStream.Empty(LocalType.typeof[A])
+    override def empty[A: Type]: LocalDataStream =
+      LocalDataStream.Empty(LocalType.typeof[A])
 
-    override def union[A: Type](l: LocalDataStream, r: LocalDataStream): LocalDataStream = LocalDataStream.Union(l, r)
+    override def union[A: Type](l: LocalDataStream, r: LocalDataStream): LocalDataStream =
+      LocalDataStream.Union(l, r)
 
-    override def intersect[A: Type](l: LocalDataStream, r: LocalDataStream): LocalDataStream = LocalDataStream.Intersect(l, r)
+    override def intersect[A: Type](l: LocalDataStream, r: LocalDataStream): LocalDataStream =
+      LocalDataStream.Intersect(l, r)
 
-    override def except[A: Type](l: LocalDataStream, r: LocalDataStream): LocalDataStream = LocalDataStream.Except(l, r)
+    override def except[A: Type](l: LocalDataStream, r: LocalDataStream): LocalDataStream =
+      LocalDataStream.Except(l, r)
 
-    override def distinct[A: Type](d: LocalDataStream): LocalDataStream = LocalDataStream.Distinct(d)
+    override def distinct[A: Type](d: LocalDataStream): LocalDataStream =
+      LocalDataStream.Distinct(d)
 
-    override def map[A: Type, B: Type](d: LocalDataStream)(f: A =>: B): LocalDataStream = LocalDataStream.Map[A, B](d, f)
+    override def map[A: Type, B: Type](d: LocalDataStream)(f: A =>: B): LocalDataStream =
+      LocalDataStream.Map[A, B](d, f)
 
-    override def sort[A: Type](d: LocalDataStream): LocalDataStream = LocalDataStream.Sort(d)
+    override def sort[A: Type](d: LocalDataStream): LocalDataStream =
+      LocalDataStream.Sort(d)
 
-    override def distinctBy[A: Type, B: Type](d: LocalDataStream)(by: A =>: B): LocalDataStream = LocalDataStream.DistinctBy[A, B](d, by)
+    override def distinctBy[A: Type, B: Type](d: LocalDataStream)(by: A =>: B): LocalDataStream =
+      LocalDataStream.DistinctBy[A, B](d, by)
   }
 
 
