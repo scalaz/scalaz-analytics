@@ -157,5 +157,5 @@ trait AnalyticsModule {
   /**
    * Execute the [[DataStream]]
    */
-  def run[A: Type](d: DataStream[A]): IO[Error, Seq[A]]
+  def run[A](d: DataStream[A]): IO[Error, Seq[A]]
 }
