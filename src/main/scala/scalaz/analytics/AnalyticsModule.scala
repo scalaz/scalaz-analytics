@@ -69,12 +69,9 @@ trait AnalyticsModule {
    * The Operations supported by the core DataStream abstraction in scalaz-analytics.
    */
   trait SetOperations {
-    def empty[A: Type]: DataStream[A]
     def union[A](l: DataStream[A], r: DataStream[A]): DataStream[A]
     def intersect[A](l: DataStream[A], r: DataStream[A]): DataStream[A]
-
     def except[A](l: DataStream[A], r: DataStream[A]): DataStream[A]
-
     def distinct[A](d: DataStream[A]): DataStream[A]
     def map[A, B](d: DataStream[A])(f: A =>: B): DataStream[B]
     def sort[A](d: DataStream[A]): DataStream[A]
@@ -86,24 +83,11 @@ trait AnalyticsModule {
    */
   trait StandardLibrary {
     def id[A: Type]: A =>: A
-
     def compose[A, B, C](f: B =>: C, g: A =>: B): A =>: C
     def andThen[A, B, C](f: A =>: B, g: B =>: C): A =>: C
-
     def fanOut[A, B, C](fst: A =>: B, snd: A =>: C): A =>: (B, C)
-
     def split[A, B, C, D](f: A =>: B, g: C =>: D): (A, C) =>: (B, D)
-
     def product[A, B](fab: A =>: B): (A, A) =>: (B, B)
-
-    def int[A](v: scala.Int): A =>: Int
-    def long[A](v: scala.Long): A =>: Long
-    def float[A](v: scala.Float): A =>: Float
-    def double[A](v: scala.Double): A =>: Double
-    def decimal[A](v: scala.BigDecimal): A =>: BigDecimal
-    def string[A](v: scala.Predef.String): A =>: String
-
-    def column[A: Type](str: scala.Predef.String): Unknown =>: A
   }
 
   trait Numeric[A] {
@@ -141,13 +125,26 @@ trait AnalyticsModule {
       setOps.distinctBy(d)(f(stdLib.id))
   }
 
+  /**
+   * Create an empty DataStream of type A
+   */
+  def empty[A: Type]: DataStream[A]
+
+  // Entry points for various supported scala types into the Analytics Language
+  def int[A](v: scala.Int): A =>: Int
+  def long[A](v: scala.Long): A =>: Long
+  def float[A](v: scala.Float): A =>: Float
+  def double[A](v: scala.Double): A =>: Double
+  def decimal[A](v: scala.BigDecimal): A =>: BigDecimal
+  def string[A](v: scala.Predef.String): A =>: String
+
   val setOps: SetOperations
   val stdLib: StandardLibrary
 
   /**
    * Described a transformation from some Unknown Column type to a concrete Type
    */
-  def column[A: Type](str: String): Unknown =>: A = stdLib.column(str)(implicitly[Type[A]])
+  def column[A: Type](str: scala.Predef.String): Unknown =>: A
 
   /**
    * Loads a [[DataStream]] without type information

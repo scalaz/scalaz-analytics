@@ -27,16 +27,16 @@ trait LocalAnalyticsModule extends AnalyticsModule {
   implicit override val unknown: Type[Unknown] = new Type[Unknown] {
     override def reified: Reified = Reified.Unknown
   }
-  implicit override val intType: Type[scala.Int]   = LocalType(Reified.Int)
+  implicit override val intType: Type[scala.Int]       = LocalType(Reified.Int)
   implicit override val intNumeric: Numeric[scala.Int] = LocalNum[Int]
 
-  implicit override val longType: Type[scala.Long]   = LocalType(Reified.Long)
+  implicit override val longType: Type[scala.Long]       = LocalType(Reified.Long)
   implicit override val longNumeric: Numeric[scala.Long] = LocalNum[scala.Long]
 
-  implicit override val floatType: Type[scala.Float]   = LocalType(Reified.Float)
+  implicit override val floatType: Type[scala.Float]       = LocalType(Reified.Float)
   implicit override val floatNumeric: Numeric[scala.Float] = LocalNum[scala.Float]
 
-  implicit override val doubleType: Type[scala.Double]   = LocalType(Reified.Double)
+  implicit override val doubleType: Type[scala.Double]       = LocalType(Reified.Double)
   implicit override val doubleNumeric: Numeric[scala.Double] = LocalNum[scala.Double]
 
   implicit override def tuple2Type[A: Type, B: Type]: Type[(A, B)] = new Type[(A, B)] {
@@ -66,7 +66,6 @@ trait LocalAnalyticsModule extends AnalyticsModule {
   sealed trait Reified
 
   object Reified {
-
     case object Int                           extends Reified
     case object Long                          extends Reified
     case object Float                         extends Reified
@@ -94,9 +93,6 @@ trait LocalAnalyticsModule extends AnalyticsModule {
   }
 
   override val setOps: SetOperations = new SetOperations {
-    override def empty[A: Type]: LocalDataStream =
-      LocalDataStream.Empty(LocalType.typeOf[A])
-
     override def union[A](l: LocalDataStream, r: LocalDataStream): LocalDataStream =
       LocalDataStream.Union(l, r)
 
@@ -160,18 +156,21 @@ trait LocalAnalyticsModule extends AnalyticsModule {
       RowFunction.Split(f, g)
 
     override def product[A, B](fab: A =>: B): (A, A) =>: (B, B) = RowFunction.Product(fab)
-
-    override def int[A](v: scala.Int): A =>: Int                   = RowFunction.IntLiteral(v)
-    override def long[A](v: scala.Long): A =>: Long                = RowFunction.LongLiteral(v)
-    override def float[A](v: scala.Float): A =>: Float             = RowFunction.FloatLiteral(v)
-    override def double[A](v: scala.Double): A =>: Double          = RowFunction.DoubleLiteral(v)
-    override def decimal[A](v: scala.BigDecimal): A =>: BigDecimal = RowFunction.DecimalLiteral(v)
-    override def string[A](v: scala.Predef.String): A =>: String   = RowFunction.StringLiteral(v)
-
-    // todo this needs more thought
-    override def column[A: Type](str: String): Unknown =>: A =
-      RowFunction.Column(str, LocalType.typeOf[A])
   }
+
+  override def empty[A: Type]: LocalDataStream = LocalDataStream.Empty(LocalType.typeOf[A])
+
+  override def int[A](v: scala.Int): A =>: Int                   = RowFunction.IntLiteral(v)
+  override def long[A](v: scala.Long): A =>: Long                = RowFunction.LongLiteral(v)
+  override def float[A](v: scala.Float): A =>: Float             = RowFunction.FloatLiteral(v)
+  override def double[A](v: scala.Double): A =>: Double          = RowFunction.DoubleLiteral(v)
+  override def decimal[A](v: scala.BigDecimal): A =>: BigDecimal = RowFunction.DecimalLiteral(v)
+  override def string[A](v: scala.Predef.String): A =>: String   = RowFunction.StringLiteral(v)
+
+
+  // todo this needs more thought
+  override def column[A: Type](str: String): Unknown =>: A =
+    RowFunction.Column(str, LocalType.typeOf[A])
 
   def load(path: String): DataStream[Unknown] = ???
 
