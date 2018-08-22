@@ -1,6 +1,7 @@
 package scalaz.analytics
 
 import scalaz.zio.IO
+import scala.language.implicitConversions
 
 /**
  * A non distributed implementation of Analytics Module
@@ -13,9 +14,10 @@ trait LocalAnalyticsModule extends AnalyticsModule {
   type UnknownType
 
   private object LocalNumeric {
+
     def apply[A: Type]: Numeric[A] =
       new Numeric[A] {
-        override val typeOf             = Type[A]
+        override val typeOf: Type[A]    = Type[A]
         override def mult: (A, A) =>: A = RowFunction.Mult(Type[A].reified)
         override def sum: (A, A) =>: A  = RowFunction.Sum(Type[A].reified)
         override def diff: (A, A) =>: A = RowFunction.Diff(Type[A].reified)
@@ -159,13 +161,14 @@ trait LocalAnalyticsModule extends AnalyticsModule {
 
   override def empty[A: Type]: LocalDataStream = LocalDataStream.Empty(LocalType.typeOf[A])
 
-  override def int[A](v: scala.Int): A =>: Int                   = RowFunction.IntLiteral(v)
-  override def long[A](v: scala.Long): A =>: Long                = RowFunction.LongLiteral(v)
-  override def float[A](v: scala.Float): A =>: Float             = RowFunction.FloatLiteral(v)
-  override def double[A](v: scala.Double): A =>: Double          = RowFunction.DoubleLiteral(v)
-  override def decimal[A](v: scala.BigDecimal): A =>: BigDecimal = RowFunction.DecimalLiteral(v)
-  override def string[A](v: scala.Predef.String): A =>: String   = RowFunction.StringLiteral(v)
-
+  implicit override def int[A](v: scala.Int): A =>: Int          = RowFunction.IntLiteral(v)
+  implicit override def long[A](v: scala.Long): A =>: Long       = RowFunction.LongLiteral(v)
+  implicit override def float[A](v: scala.Float): A =>: Float    = RowFunction.FloatLiteral(v)
+  implicit override def double[A](v: scala.Double): A =>: Double = RowFunction.DoubleLiteral(v)
+  implicit override def decimal[A](v: scala.BigDecimal): A =>: BigDecimal =
+    RowFunction.DecimalLiteral(v)
+  implicit override def string[A](v: scala.Predef.String): A =>: String =
+    RowFunction.StringLiteral(v)
 
   // todo this needs more thought
   override def column[A: Type](str: String): Unknown =>: A =

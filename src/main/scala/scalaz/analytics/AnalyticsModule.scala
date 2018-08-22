@@ -1,6 +1,7 @@
 package scalaz.analytics
 
 import scalaz.zio.IO
+import scala.language.implicitConversions
 
 /**
  * An analytics module defined the abstract components required to build a reified program description.
@@ -131,12 +132,12 @@ trait AnalyticsModule {
   def empty[A: Type]: DataStream[A]
 
   // Entry points for various supported scala types into the Analytics Language
-  def int[A](v: scala.Int): A =>: Int
-  def long[A](v: scala.Long): A =>: Long
-  def float[A](v: scala.Float): A =>: Float
-  def double[A](v: scala.Double): A =>: Double
-  def decimal[A](v: scala.BigDecimal): A =>: BigDecimal
-  def string[A](v: scala.Predef.String): A =>: String
+  implicit def int[A](v: scala.Int): A =>: Int
+  implicit def long[A](v: scala.Long): A =>: Long
+  implicit def float[A](v: scala.Float): A =>: Float
+  implicit def double[A](v: scala.Double): A =>: Double
+  implicit def decimal[A](v: scala.BigDecimal): A =>: BigDecimal
+  implicit def string[A](v: scala.Predef.String): A =>: String
 
   val setOps: SetOperations
   val stdLib: StandardLibrary

@@ -12,6 +12,6 @@ object SimpleExample {
 
   val ds: DataStream[Int] =
     empty[Int]
-      .map(i => i * int(7))
-      .distinctBy(i => i % int(2))
+      .map(i => i * 7)
+      .distinctBy(i => i % 2)
 }
