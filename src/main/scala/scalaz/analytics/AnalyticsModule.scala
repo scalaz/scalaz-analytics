@@ -32,16 +32,16 @@ trait AnalyticsModule {
   implicit val unknown: Type[Unknown]
 
   implicit val intType: Type[Int]
-  implicit val intNumeric: Num[Int]
+  implicit val intNumeric: Numeric[Int]
 
   implicit val longType: Type[Long]
-  implicit val longNumeric: Num[Long]
+  implicit val longNumeric: Numeric[Long]
 
   implicit val floatType: Type[Float]
-  implicit val floatNumeric: Num[Float]
+  implicit val floatNumeric: Numeric[Float]
 
   implicit val doubleType: Type[Double]
-  implicit val doubleNumeric: Num[Double]
+  implicit val doubleNumeric: Numeric[Double]
 
   implicit def tuple2Type[A: Type, B: Type]: Type[(A, B)]
 
@@ -106,7 +106,7 @@ trait AnalyticsModule {
     def column[A: Type](str: scala.Predef.String): Unknown =>: A
   }
 
-  trait Num[A] {
+  trait Numeric[A] {
     def typeOf: Type[A] // underlying repr
 
     def mult: (A, A) =>: A
@@ -115,18 +115,18 @@ trait AnalyticsModule {
     def mod: (A, A) =>: A
   }
 
-  object Num {
-    def apply[A: Num]: Num[A] = implicitly[Num[A]]
+  object Numeric {
+    def apply[A: Numeric]: Numeric[A] = implicitly[Numeric[A]]
   }
 
   /**
    * A DSL for numeric operations
    */
   implicit class NumericSyntax[A, B](val l: A =>: B) {
-    def * (r: A =>: B)(implicit B: Num[B]): A =>: B = (l &&& r) >>> B.mult
-    def + (r: A =>: B)(implicit B: Num[B]): A =>: B = (l &&& r) >>> B.sum
-    def - (r: A =>: B)(implicit B: Num[B]): A =>: B = (l &&& r) >>> B.diff
-    def % (r: A =>: B)(implicit B: Num[B]): A =>: B = (l &&& r) >>> B.mod
+    def * (r: A =>: B)(implicit B: Numeric[B]): A =>: B = (l &&& r) >>> B.mult
+    def + (r: A =>: B)(implicit B: Numeric[B]): A =>: B = (l &&& r) >>> B.sum
+    def - (r: A =>: B)(implicit B: Numeric[B]): A =>: B = (l &&& r) >>> B.diff
+    def % (r: A =>: B)(implicit B: Numeric[B]): A =>: B = (l &&& r) >>> B.mod
   }
 
   /**
