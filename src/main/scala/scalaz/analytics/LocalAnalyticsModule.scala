@@ -12,8 +12,7 @@ trait LocalAnalyticsModule extends AnalyticsModule {
   override type =>:[-A, +B]   = RowFunction
   type UnknownType
 
-  private object LocalNum {
-
+  private object LocalNumeric {
     def apply[A: Type]: Numeric[A] =
       new Numeric[A] {
         override val typeOf             = Type[A]
@@ -28,16 +27,16 @@ trait LocalAnalyticsModule extends AnalyticsModule {
     override def reified: Reified = Reified.Unknown
   }
   implicit override val intType: Type[scala.Int]       = LocalType(Reified.Int)
-  implicit override val intNumeric: Numeric[scala.Int] = LocalNum[Int]
+  implicit override val intNumeric: Numeric[scala.Int] = LocalNumeric[Int]
 
   implicit override val longType: Type[scala.Long]       = LocalType(Reified.Long)
-  implicit override val longNumeric: Numeric[scala.Long] = LocalNum[scala.Long]
+  implicit override val longNumeric: Numeric[scala.Long] = LocalNumeric[scala.Long]
 
   implicit override val floatType: Type[scala.Float]       = LocalType(Reified.Float)
-  implicit override val floatNumeric: Numeric[scala.Float] = LocalNum[scala.Float]
+  implicit override val floatNumeric: Numeric[scala.Float] = LocalNumeric[scala.Float]
 
   implicit override val doubleType: Type[scala.Double]       = LocalType(Reified.Double)
-  implicit override val doubleNumeric: Numeric[scala.Double] = LocalNum[scala.Double]
+  implicit override val doubleNumeric: Numeric[scala.Double] = LocalNumeric[scala.Double]
 
   implicit override def tuple2Type[A: Type, B: Type]: Type[(A, B)] = new Type[(A, B)] {
     override def reified: Reified = Reified.Tuple2(LocalType.typeOf[A], LocalType.typeOf[B])
