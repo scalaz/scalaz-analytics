@@ -40,7 +40,7 @@ trait LocalAnalyticsModule extends AnalyticsModule {
   implicit override val doubleNumeric: Numeric[scala.Double] = LocalNum[scala.Double]
 
   implicit override def tuple2Type[A: Type, B: Type]: Type[(A, B)] = new Type[(A, B)] {
-    override def reified: Reified = Reified.Tuple2(LocalType.typeof[A], LocalType.typeof[B])
+    override def reified: Reified = Reified.Tuple2(LocalType.typeOf[A], LocalType.typeOf[B])
   }
 
   /**
@@ -51,7 +51,7 @@ trait LocalAnalyticsModule extends AnalyticsModule {
   }
 
   object LocalType {
-    def typeof[A](implicit ev: LocalType[A]): Reified = ev.reified
+    def typeOf[A](implicit ev: LocalType[A]): Reified = ev.reified
 
     private[LocalAnalyticsModule] def apply[A](r: Reified): Type[A] =
       new Type[A] {
@@ -95,7 +95,7 @@ trait LocalAnalyticsModule extends AnalyticsModule {
 
   override val setOps: SetOperations = new SetOperations {
     override def empty[A: Type]: LocalDataStream =
-      LocalDataStream.Empty(LocalType.typeof[A])
+      LocalDataStream.Empty(LocalType.typeOf[A])
 
     override def union[A](l: LocalDataStream, r: LocalDataStream): LocalDataStream =
       LocalDataStream.Union(l, r)
@@ -147,7 +147,7 @@ trait LocalAnalyticsModule extends AnalyticsModule {
   }
 
   override val stdLib: StandardLibrary = new StandardLibrary {
-    override def id[A: Type]: A =>: A = RowFunction.Id(LocalType.typeof[A])
+    override def id[A: Type]: A =>: A = RowFunction.Id(LocalType.typeOf[A])
 
     override def compose[A, B, C](f: B =>: C, g: A =>: B): A =>: C = RowFunction.Compose(f, g)
 
@@ -170,7 +170,7 @@ trait LocalAnalyticsModule extends AnalyticsModule {
 
     // todo this needs more thought
     override def column[A: Type](str: String): Unknown =>: A =
-      RowFunction.Column(str, LocalType.typeof[A])
+      RowFunction.Column(str, LocalType.typeOf[A])
   }
 
   def load(path: String): DataStream[Unknown] = ???
