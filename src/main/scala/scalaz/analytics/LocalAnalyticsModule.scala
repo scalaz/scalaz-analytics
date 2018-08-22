@@ -88,9 +88,9 @@ trait LocalAnalyticsModule extends AnalyticsModule {
     case class Intersect(a: LocalDataStream, b: LocalDataStream) extends LocalDataStream
     case class Except(a: LocalDataStream, b: LocalDataStream)    extends LocalDataStream
     case class Distinct(a: LocalDataStream)                      extends LocalDataStream
-    case class Map[A, B](d: LocalDataStream, f: A =>: B)         extends LocalDataStream
+    case class Map(d: LocalDataStream, f: RowFunction)           extends LocalDataStream
     case class Sort(a: LocalDataStream)                          extends LocalDataStream
-    case class DistinctBy[A, B](d: LocalDataStream, f: A =>: B)  extends LocalDataStream
+    case class DistinctBy(d: LocalDataStream, f: RowFunction)    extends LocalDataStream
   }
 
   override val setOps: SetOperations = new SetOperations {
@@ -110,13 +110,13 @@ trait LocalAnalyticsModule extends AnalyticsModule {
       LocalDataStream.Distinct(d)
 
     override def map[A, B](d: LocalDataStream)(f: A =>: B): LocalDataStream =
-      LocalDataStream.Map[A, B](d, f)
+      LocalDataStream.Map(d, f)
 
     override def sort[A](d: LocalDataStream): LocalDataStream =
       LocalDataStream.Sort(d)
 
     override def distinctBy[A, B](d: LocalDataStream)(by: A =>: B): LocalDataStream =
-      LocalDataStream.DistinctBy[A, B](d, by)
+      LocalDataStream.DistinctBy(d, by)
   }
 
   /**
@@ -128,10 +128,10 @@ trait LocalAnalyticsModule extends AnalyticsModule {
   object RowFunction {
     case class Id(reifiedType: Reified)                       extends RowFunction
     case class Compose(left: RowFunction, right: RowFunction) extends RowFunction
-    case class Mult[A](typ: Reified)                          extends RowFunction
+    case class Mult(typ: Reified)                             extends RowFunction
     case class Sum(typ: Reified)                              extends RowFunction
     case class Diff(typ: Reified)                             extends RowFunction
-    case class Mod[A](typ: Reified)                           extends RowFunction
+    case class Mod(typ: Reified)                              extends RowFunction
     case class FanOut(fst: RowFunction, snd: RowFunction)     extends RowFunction
     case class Split(f: RowFunction, g: RowFunction)          extends RowFunction
     case class Product(fab: RowFunction)                      extends RowFunction
