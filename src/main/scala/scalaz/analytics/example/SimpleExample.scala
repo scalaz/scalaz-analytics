@@ -11,8 +11,7 @@ object SimpleExample {
     println(ds)
 
   val ds: DataStream[Int] =
-    setOps
-      .empty[Int]
-      .map(i => i * stdLib.int(7))
-      .distinctBy(i => i % stdLib.int(2))
+    empty[Int]
+      .map(i => i * int(7))
+      .distinctBy(i => i % int(2))
 }
