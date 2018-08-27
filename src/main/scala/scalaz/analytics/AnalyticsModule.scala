@@ -1,7 +1,6 @@
 package scalaz.analytics
 
 import scalaz.zio.IO
-
 import scala.language.implicitConversions
 
 /**
