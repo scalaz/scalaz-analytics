@@ -1,9 +1,9 @@
 package scalaz.analytics
 
 import scalaz.zio.IO
+
 import scala.language.implicitConversions
-import java.sql.Timestamp
-import java.sql.Date
+import java.time.{ LocalDate, LocalDateTime }
 
 /**
  * A non distributed implementation of Analytics Module
@@ -48,13 +48,13 @@ trait LocalAnalyticsModule extends AnalyticsModule {
   implicit override val decimalNumeric: Numeric[scala.math.BigDecimal] =
     LocalNumeric[scala.BigDecimal]
 
-  implicit override val stringType: Type[scala.Predef.String]   = LocalType(Reified.String)
-  implicit override val booleanType: Type[scala.Boolean]        = LocalType(Reified.Boolean)
-  implicit override val byteType: Type[scala.Byte]              = LocalType(Reified.Byte)
-  implicit override val nullType: Type[scala.Null]              = LocalType(Reified.Null)
-  implicit override val shortType: Type[scala.Short]            = LocalType(Reified.Short)
-  implicit override val timestampType: Type[java.sql.Timestamp] = LocalType(Reified.Timestamp)
-  implicit override val dateType: Type[java.sql.Date]           = LocalType(Reified.Date)
+  implicit override val stringType: Type[scala.Predef.String] = LocalType(Reified.String)
+  implicit override val booleanType: Type[scala.Boolean]      = LocalType(Reified.Boolean)
+  implicit override val byteType: Type[scala.Byte]            = LocalType(Reified.Byte)
+  implicit override val nullType: Type[scala.Null]            = LocalType(Reified.Null)
+  implicit override val shortType: Type[scala.Short]          = LocalType(Reified.Short)
+  implicit override val timestampType: Type[LocalDateTime]    = LocalType(Reified.Timestamp)
+  implicit override val dateType: Type[LocalDate]             = LocalType(Reified.Date)
 
   implicit override def tuple2Type[A: Type, B: Type]: Type[(A, B)] = new Type[(A, B)] {
     override def reified: Reified = Reified.Tuple2(LocalType.typeOf[A], LocalType.typeOf[B])
@@ -158,18 +158,18 @@ trait LocalAnalyticsModule extends AnalyticsModule {
     case class Column(colName: String, rType: Reified)        extends RowFunction
 
     // constants
-    case class IntLiteral(value: Int)             extends RowFunction
-    case class LongLiteral(value: Long)           extends RowFunction
-    case class FloatLiteral(value: Float)         extends RowFunction
-    case class DoubleLiteral(value: Double)       extends RowFunction
-    case class DecimalLiteral(value: BigDecimal)  extends RowFunction
-    case class StringLiteral(value: String)       extends RowFunction
-    case class BooleanLiteral(value: Boolean)     extends RowFunction
-    case class ByteLiteral(value: Byte)           extends RowFunction
-    case class NullLiteral(value: Null)           extends RowFunction
-    case class ShortLiteral(value: Short)         extends RowFunction
-    case class TimestampLiteral(value: Timestamp) extends RowFunction
-    case class DateLiteral(value: Date)           extends RowFunction
+    case class IntLiteral(value: Int)                 extends RowFunction
+    case class LongLiteral(value: Long)               extends RowFunction
+    case class FloatLiteral(value: Float)             extends RowFunction
+    case class DoubleLiteral(value: Double)           extends RowFunction
+    case class DecimalLiteral(value: BigDecimal)      extends RowFunction
+    case class StringLiteral(value: String)           extends RowFunction
+    case class BooleanLiteral(value: Boolean)         extends RowFunction
+    case class ByteLiteral(value: Byte)               extends RowFunction
+    case class NullLiteral(value: Null)               extends RowFunction
+    case class ShortLiteral(value: Short)             extends RowFunction
+    case class TimestampLiteral(value: LocalDateTime) extends RowFunction
+    case class DateLiteral(value: LocalDate)          extends RowFunction
   }
 
   override val stdLib: StandardLibrary = new StandardLibrary {
@@ -202,9 +202,9 @@ trait LocalAnalyticsModule extends AnalyticsModule {
   implicit override def byte[A](v: scala.Byte): A =>: Byte          = RowFunction.ByteLiteral(v)
   implicit override def `null`[A](v: scala.Null): A =>: Null        = RowFunction.NullLiteral(v)
   implicit override def short[A](v: scala.Short): A =>: Short       = RowFunction.ShortLiteral(v)
-  implicit override def timestamp[A](v: Timestamp): A =>: Timestamp =
+  implicit override def timestamp[A](v: LocalDateTime): A =>: LocalDateTime =
     RowFunction.TimestampLiteral(v)
-  implicit override def date[A](v: Date): A =>: Date = RowFunction.DateLiteral(v)
+  implicit override def date[A](v: LocalDate): A =>: LocalDate = RowFunction.DateLiteral(v)
 
   // todo this needs more thought
   override def column[A: Type](str: String): Unknown =>: A =

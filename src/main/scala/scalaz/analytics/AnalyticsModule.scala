@@ -52,8 +52,8 @@ trait AnalyticsModule {
   implicit val byteType: Type[Byte]
   implicit val nullType: Type[scala.Null]
   implicit val shortType: Type[Short]
-  implicit val timestampType: Type[java.sql.Timestamp]
-  implicit val dateType: Type[java.sql.Date]
+  implicit val timestampType: Type[java.time.LocalDateTime]
+  implicit val dateType: Type[java.time.LocalDate]
 
   implicit def tuple2Type[A: Type, B: Type]: Type[(A, B)]
 
@@ -151,11 +151,10 @@ trait AnalyticsModule {
   implicit def string[A](v: scala.Predef.String): A =>: String
   implicit def boolean[A](v: scala.Boolean): A =>: String
   implicit def byte[A](v: scala.Byte): A =>: Byte
-  // TODO;  Why Null? Or we need to support a type B that can be Null (implicit ev: scala.Null <:< B) ?
   implicit def `null`[A](v: Null): A =>: Null
   implicit def short[A](v: scala.Short): A =>: Short
-  implicit def timestamp[A](v: java.sql.Timestamp): A =>: java.sql.Timestamp
-  implicit def date[A](v: java.sql.Date): A =>: java.sql.Date
+  implicit def timestamp[A](v: java.time.LocalDateTime): A =>: java.sql.Timestamp
+  implicit def date[A](v: java.time.LocalDate): A =>: java.sql.Date
 
   val setOps: SetOperations
   val stdLib: StandardLibrary
