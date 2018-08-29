@@ -2,7 +2,7 @@ package scalaz.analytics
 
 import scalaz.zio.IO
 import scala.language.implicitConversions
-import java.time.{ Instant, LocalDate }
+import java.time.Instant
 
 /**
  * A non distributed implementation of Analytics Module
@@ -55,7 +55,6 @@ trait LocalAnalyticsModule extends AnalyticsModule {
   implicit override val nullType: Type[scala.Null]            = LocalType(Reified.Null)
   implicit override val shortType: Type[scala.Short]          = LocalType(Reified.Short)
   implicit override val instantType: Type[Instant]            = LocalType(Reified.Instant)
-  implicit override val dateType: Type[LocalDate]             = LocalType(Reified.LocalDate)
 
   implicit override def tuple2Type[A: Type, B: Type]: Type[(A, B)] = new Type[(A, B)] {
     override def reified: Reified = Reified.Tuple2(LocalType.typeOf[A], LocalType.typeOf[B])
@@ -96,7 +95,6 @@ trait LocalAnalyticsModule extends AnalyticsModule {
     case object Null                          extends Reified
     case object Short                         extends Reified
     case object Instant                       extends Reified
-    case object LocalDate                     extends Reified
     case object Unknown                       extends Reified
     case class Tuple2(a: Reified, b: Reified) extends Reified
   }
@@ -153,18 +151,17 @@ trait LocalAnalyticsModule extends AnalyticsModule {
     case class Column(colName: String, rType: Reified)        extends RowFunction
 
     // constants
-    case class IntLiteral(value: Int)             extends RowFunction
-    case class LongLiteral(value: Long)           extends RowFunction
-    case class FloatLiteral(value: Float)         extends RowFunction
-    case class DoubleLiteral(value: Double)       extends RowFunction
-    case class DecimalLiteral(value: BigDecimal)  extends RowFunction
-    case class StringLiteral(value: String)       extends RowFunction
-    case class BooleanLiteral(value: Boolean)     extends RowFunction
-    case class ByteLiteral(value: Byte)           extends RowFunction
-    case object NullLiteral                       extends RowFunction
-    case class ShortLiteral(value: Short)         extends RowFunction
-    case class InstantLiteral(value: Instant)     extends RowFunction
-    case class LocalDateLiteral(value: LocalDate) extends RowFunction
+    case class IntLiteral(value: Int)            extends RowFunction
+    case class LongLiteral(value: Long)          extends RowFunction
+    case class FloatLiteral(value: Float)        extends RowFunction
+    case class DoubleLiteral(value: Double)      extends RowFunction
+    case class DecimalLiteral(value: BigDecimal) extends RowFunction
+    case class StringLiteral(value: String)      extends RowFunction
+    case class BooleanLiteral(value: Boolean)    extends RowFunction
+    case class ByteLiteral(value: Byte)          extends RowFunction
+    case object NullLiteral                      extends RowFunction
+    case class ShortLiteral(value: Short)        extends RowFunction
+    case class InstantLiteral(value: Instant)    extends RowFunction
   }
 
   override val stdLib: StandardLibrary = new StandardLibrary {
@@ -200,8 +197,6 @@ trait LocalAnalyticsModule extends AnalyticsModule {
   implicit override def `null`[A](v: scala.Null): A =>: Null        = RowFunction.NullLiteral
   implicit override def short[A](v: scala.Short): A =>: Short       = RowFunction.ShortLiteral(v)
   implicit override def instant[A](v: Instant): A =>: Instant       = RowFunction.InstantLiteral(v)
-  implicit override def localDate[A](v: LocalDate): A =>: LocalDate =
-    RowFunction.LocalDateLiteral(v)
 
   // todo this needs more thought
   override def column[A: Type](str: String): Unknown =>: A =
