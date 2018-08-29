@@ -166,7 +166,7 @@ trait LocalAnalyticsModule extends AnalyticsModule {
     case class StringLiteral(value: String)           extends RowFunction
     case class BooleanLiteral(value: Boolean)         extends RowFunction
     case class ByteLiteral(value: Byte)               extends RowFunction
-    case class NullLiteral(value: Null)               extends RowFunction
+    case object NullLiteral                           extends RowFunction
     case class ShortLiteral(value: Short)             extends RowFunction
     case class TimestampLiteral(value: LocalDateTime) extends RowFunction
     case class DateLiteral(value: LocalDate)          extends RowFunction
@@ -200,7 +200,7 @@ trait LocalAnalyticsModule extends AnalyticsModule {
     RowFunction.StringLiteral(v)
   implicit override def boolean[A](v: scala.Boolean): A =>: Boolean = RowFunction.BooleanLiteral(v)
   implicit override def byte[A](v: scala.Byte): A =>: Byte          = RowFunction.ByteLiteral(v)
-  implicit override def `null`[A](v: scala.Null): A =>: Null        = RowFunction.NullLiteral(v)
+  implicit override def `null`[A](v: scala.Null): A =>: Null        = RowFunction.NullLiteral
   implicit override def short[A](v: scala.Short): A =>: Short       = RowFunction.ShortLiteral(v)
   implicit override def timestamp[A](v: LocalDateTime): A =>: LocalDateTime =
     RowFunction.TimestampLiteral(v)
