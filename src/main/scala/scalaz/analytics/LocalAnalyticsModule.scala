@@ -1,12 +1,14 @@
 package scalaz.analytics
 
 import scalaz.zio.IO
+
 import scala.language.implicitConversions
 
 /**
  * A non distributed implementation of Analytics Module
  */
 trait LocalAnalyticsModule extends AnalyticsModule {
+  override type Dataset[A]    = LocalDataStream
   override type DataStream[A] = LocalDataStream
   override type Type[A]       = LocalType[A]
   override type Unknown       = UnknownType
@@ -17,11 +19,12 @@ trait LocalAnalyticsModule extends AnalyticsModule {
 
     def apply[A: Type]: Numeric[A] =
       new Numeric[A] {
-        override val typeOf: Type[A]    = Type[A]
-        override def mult: (A, A) =>: A = RowFunction.Mult(Type[A].reified)
-        override def sum: (A, A) =>: A  = RowFunction.Sum(Type[A].reified)
-        override def diff: (A, A) =>: A = RowFunction.Diff(Type[A].reified)
-        override def mod: (A, A) =>: A  = RowFunction.Mod(Type[A].reified)
+        override val typeOf: Type[A]                 = Type[A]
+        override def mult: (A, A) =>: A              = RowFunction.Mult(Type[A].reified)
+        override def sum: (A, A) =>: A               = RowFunction.Sum(Type[A].reified)
+        override def diff: (A, A) =>: A              = RowFunction.Diff(Type[A].reified)
+        override def mod: (A, A) =>: A               = RowFunction.Mod(Type[A].reified)
+        override def greaterThan: (A, A) =>: Boolean = RowFunction.GreaterThan(Type[A].reified)
       }
   }
 
@@ -83,38 +86,31 @@ trait LocalAnalyticsModule extends AnalyticsModule {
   sealed trait LocalDataStream
 
   object LocalDataStream {
-    case class Empty(rType: Reified)                             extends LocalDataStream
-    case class Union(a: LocalDataStream, b: LocalDataStream)     extends LocalDataStream
-    case class Intersect(a: LocalDataStream, b: LocalDataStream) extends LocalDataStream
-    case class Except(a: LocalDataStream, b: LocalDataStream)    extends LocalDataStream
-    case class Distinct(a: LocalDataStream)                      extends LocalDataStream
-    case class Map(d: LocalDataStream, f: RowFunction)           extends LocalDataStream
-    case class Sort(a: LocalDataStream)                          extends LocalDataStream
-    case class DistinctBy(d: LocalDataStream, f: RowFunction)    extends LocalDataStream
+    case class Empty(rType: Reified) extends LocalDataStream
+
+    case class Map(d: LocalDataStream, f: RowFunction)    extends LocalDataStream
+    case class Filter(d: LocalDataStream, f: RowFunction) extends LocalDataStream
+
+    case class Fold(d: LocalDataStream, initial: RowFunction, f: RowFunction, window: Window)
+        extends LocalDataStream
+    case class Distinct(d: LocalDataStream, window: Window) extends LocalDataStream
   }
 
-  override val setOps: SetOperations = new SetOperations {
-    override def union[A](l: LocalDataStream, r: LocalDataStream): LocalDataStream =
-      LocalDataStream.Union(l, r)
+  private val ops: Ops[Dataset] = new Ops[Dataset] {
+    override def map[A, B](ds: LocalDataStream)(f: A =>: B): LocalDataStream =
+      LocalDataStream.Map(ds, f)
+    override def filter[A, B](ds: LocalDataStream)(f: A =>: Boolean): LocalDataStream =
+      LocalDataStream.Filter(ds, f)
 
-    override def intersect[A](l: LocalDataStream, r: LocalDataStream): LocalDataStream =
-      LocalDataStream.Intersect(l, r)
-
-    override def except[A](l: LocalDataStream, r: LocalDataStream): LocalDataStream =
-      LocalDataStream.Except(l, r)
-
-    override def distinct[A](d: LocalDataStream): LocalDataStream =
-      LocalDataStream.Distinct(d)
-
-    override def map[A, B](d: LocalDataStream)(f: A =>: B): LocalDataStream =
-      LocalDataStream.Map(d, f)
-
-    override def sort[A](d: LocalDataStream): LocalDataStream =
-      LocalDataStream.Sort(d)
-
-    override def distinctBy[A, B](d: LocalDataStream)(by: A =>: B): LocalDataStream =
-      LocalDataStream.DistinctBy(d, by)
+    override def fold[A, B](ds: LocalDataStream)(window: Window)(initial: A =>: B)(
+      f: (B, A) =>: B
+    ): LocalDataStream = LocalDataStream.Fold(ds, initial, f, window)
+    override def distinct[A](ds: LocalDataStream)(window: Window): LocalDataStream =
+      LocalDataStream.Distinct(ds, window)
   }
+
+  override val setOps: Ops[Dataset]       = ops
+  override val streamOps: Ops[DataStream] = ops
 
   /**
    * An implementation of the arrow (=>:) in AnalyticsModule
@@ -129,6 +125,7 @@ trait LocalAnalyticsModule extends AnalyticsModule {
     case class Sum(typ: Reified)                              extends RowFunction
     case class Diff(typ: Reified)                             extends RowFunction
     case class Mod(typ: Reified)                              extends RowFunction
+    case class GreaterThan(typ: Reified)                      extends RowFunction
     case class FanOut(fst: RowFunction, snd: RowFunction)     extends RowFunction
     case class Split(f: RowFunction, g: RowFunction)          extends RowFunction
     case class Product(fab: RowFunction)                      extends RowFunction
@@ -136,6 +133,7 @@ trait LocalAnalyticsModule extends AnalyticsModule {
 
     // constants
     case class IntLiteral(value: Int)            extends RowFunction
+    case class BooleanLiteral(value: Boolean)    extends RowFunction
     case class LongLiteral(value: Long)          extends RowFunction
     case class FloatLiteral(value: Float)        extends RowFunction
     case class DoubleLiteral(value: Double)      extends RowFunction
@@ -161,7 +159,10 @@ trait LocalAnalyticsModule extends AnalyticsModule {
 
   override def empty[A: Type]: LocalDataStream = LocalDataStream.Empty(LocalType.typeOf[A])
 
+  override def emptyStream[A: Type]: LocalDataStream = LocalDataStream.Empty(LocalType.typeOf[A])
+
   implicit override def int[A](v: scala.Int): A =>: Int          = RowFunction.IntLiteral(v)
+  implicit override def boolean[A](v: Boolean): A =>: Boolean    = RowFunction.BooleanLiteral(v)
   implicit override def long[A](v: scala.Long): A =>: Long       = RowFunction.LongLiteral(v)
   implicit override def float[A](v: scala.Float): A =>: Float    = RowFunction.FloatLiteral(v)
   implicit override def double[A](v: scala.Double): A =>: Double = RowFunction.DoubleLiteral(v)
