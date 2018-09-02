@@ -20,7 +20,7 @@ trait AnalyticsModule {
   type DataStream[A]
 
   /**
-   * A window is a way o specify a view on a DataStream/Dataset
+   * A window is a way to specify a view on a DataStream/Dataset
    */
   sealed trait Window
 
@@ -29,7 +29,6 @@ trait AnalyticsModule {
     case class SlidingTimeWindow() extends Window
     case class SessionWindow()     extends Window
     // For internal use only
-    // todo would you ever want a GlobalWindow on a DataStream? Probably not?
     case class GlobalWindow private () extends Window
   }
 
@@ -98,20 +97,16 @@ trait AnalyticsModule {
   }
 
   /**
-   * All operations that don't require a bounded input
+   * The dataset/datastream operations of scalaz-analytics
    */
   trait Ops[F[_]] {
     // Unbounded
     def map[A, B](ds: F[A])(f: A =>: B): F[B]
     def filter[A, B](ds: F[A])(f: A =>: Boolean): F[A]
-    // todo add more
 
     // Bounded
-    def fold[A, B](ds: F[A])(window: Window)(initial: A =>: B)(f: (B, A) =>: B): F[B] // todo is `initial` and `f` correct?
+    def fold[A, B](ds: F[A])(window: Window)(initial: A =>: B)(f: (B, A) =>: B): F[B]
     def distinct[A](ds: F[A])(window: Window): F[A]
-    // todo add more
-
-    // todo prototype how joins/unions etc will work
   }
 
   /**
