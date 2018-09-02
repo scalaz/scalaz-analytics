@@ -204,10 +204,9 @@ trait AnalyticsModule {
   implicit def long[A](v: scala.Long): A =>: Long
   implicit def float[A](v: scala.Float): A =>: Float
   implicit def double[A](v: scala.Double): A =>: Double
-  implicit def boolean[A](v: scala.Boolean): A =>: Boolean
   implicit def decimal[A](v: scala.BigDecimal): A =>: BigDecimal
   implicit def string[A](v: scala.Predef.String): A =>: String
-  implicit def boolean[A](v: scala.Boolean): A =>: String
+  implicit def boolean[A](v: scala.Boolean): A =>: Boolean
   implicit def byte[A](v: scala.Byte): A =>: Byte
   implicit def `null`[A](v: Null): A =>: Null
   implicit def short[A](v: scala.Short): A =>: Short
