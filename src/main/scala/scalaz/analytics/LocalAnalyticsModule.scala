@@ -1,8 +1,8 @@
 package scalaz.analytics
 
 import scalaz.zio.IO
-
 import scala.language.implicitConversions
+import java.time.{ LocalDate, LocalDateTime }
 
 /**
  * A non distributed implementation of Analytics Module
@@ -43,6 +43,20 @@ trait LocalAnalyticsModule extends AnalyticsModule {
   implicit override val doubleType: Type[scala.Double]       = LocalType(Reified.Double)
   implicit override val doubleNumeric: Numeric[scala.Double] = LocalNumeric[scala.Double]
 
+  implicit override val decimalType: LocalType[scala.math.BigDecimal] = LocalType(
+    Reified.BigDecimal
+  )
+  implicit override val decimalNumeric: Numeric[scala.math.BigDecimal] =
+    LocalNumeric[scala.BigDecimal]
+
+  implicit override val stringType: Type[scala.Predef.String] = LocalType(Reified.String)
+  implicit override val booleanType: Type[scala.Boolean]      = LocalType(Reified.Boolean)
+  implicit override val byteType: Type[scala.Byte]            = LocalType(Reified.Byte)
+  implicit override val nullType: Type[scala.Null]            = LocalType(Reified.Null)
+  implicit override val shortType: Type[scala.Short]          = LocalType(Reified.Short)
+  implicit override val timestampType: Type[LocalDateTime]    = LocalType(Reified.Timestamp)
+  implicit override val dateType: Type[LocalDate]             = LocalType(Reified.Date)
+
   implicit override def tuple2Type[A: Type, B: Type]: Type[(A, B)] = new Type[(A, B)] {
     override def reified: Reified = Reified.Tuple2(LocalType.typeOf[A], LocalType.typeOf[B])
   }
@@ -74,8 +88,15 @@ trait LocalAnalyticsModule extends AnalyticsModule {
     case object Long                          extends Reified
     case object Float                         extends Reified
     case object Double                        extends Reified
+    case object BigDecimal                    extends Reified
     case object String                        extends Reified
     case object Decimal                       extends Reified
+    case object Boolean                       extends Reified
+    case object Byte                          extends Reified
+    case object Null                          extends Reified
+    case object Short                         extends Reified
+    case object Timestamp                     extends Reified
+    case object Date                          extends Reified
     case object Unknown                       extends Reified
     case class Tuple2(a: Reified, b: Reified) extends Reified
   }
@@ -132,13 +153,18 @@ trait LocalAnalyticsModule extends AnalyticsModule {
     case class Column(colName: String, rType: Reified)        extends RowFunction
 
     // constants
-    case class IntLiteral(value: Int)            extends RowFunction
-    case class BooleanLiteral(value: Boolean)    extends RowFunction
-    case class LongLiteral(value: Long)          extends RowFunction
-    case class FloatLiteral(value: Float)        extends RowFunction
-    case class DoubleLiteral(value: Double)      extends RowFunction
-    case class DecimalLiteral(value: BigDecimal) extends RowFunction
-    case class StringLiteral(value: String)      extends RowFunction
+    case class IntLiteral(value: Int)                 extends RowFunction
+    case class LongLiteral(value: Long)               extends RowFunction
+    case class FloatLiteral(value: Float)             extends RowFunction
+    case class DoubleLiteral(value: Double)           extends RowFunction
+    case class DecimalLiteral(value: BigDecimal)      extends RowFunction
+    case class StringLiteral(value: String)           extends RowFunction
+    case class BooleanLiteral(value: Boolean)         extends RowFunction
+    case class ByteLiteral(value: Byte)               extends RowFunction
+    case object NullLiteral                           extends RowFunction
+    case class ShortLiteral(value: Short)             extends RowFunction
+    case class TimestampLiteral(value: LocalDateTime) extends RowFunction
+    case class DateLiteral(value: LocalDate)          extends RowFunction
   }
 
   override val stdLib: StandardLibrary = new StandardLibrary {
@@ -162,7 +188,6 @@ trait LocalAnalyticsModule extends AnalyticsModule {
   override def emptyStream[A: Type]: LocalDataStream = LocalDataStream.Empty(LocalType.typeOf[A])
 
   implicit override def int[A](v: scala.Int): A =>: Int          = RowFunction.IntLiteral(v)
-  implicit override def boolean[A](v: Boolean): A =>: Boolean    = RowFunction.BooleanLiteral(v)
   implicit override def long[A](v: scala.Long): A =>: Long       = RowFunction.LongLiteral(v)
   implicit override def float[A](v: scala.Float): A =>: Float    = RowFunction.FloatLiteral(v)
   implicit override def double[A](v: scala.Double): A =>: Double = RowFunction.DoubleLiteral(v)
@@ -170,6 +195,13 @@ trait LocalAnalyticsModule extends AnalyticsModule {
     RowFunction.DecimalLiteral(v)
   implicit override def string[A](v: scala.Predef.String): A =>: String =
     RowFunction.StringLiteral(v)
+  implicit override def boolean[A](v: scala.Boolean): A =>: Boolean = RowFunction.BooleanLiteral(v)
+  implicit override def byte[A](v: scala.Byte): A =>: Byte          = RowFunction.ByteLiteral(v)
+  implicit override def `null`[A](v: scala.Null): A =>: Null        = RowFunction.NullLiteral
+  implicit override def short[A](v: scala.Short): A =>: Short       = RowFunction.ShortLiteral(v)
+  implicit override def timestamp[A](v: LocalDateTime): A =>: LocalDateTime =
+    RowFunction.TimestampLiteral(v)
+  implicit override def date[A](v: LocalDate): A =>: LocalDate = RowFunction.DateLiteral(v)
 
   // todo this needs more thought
   override def column[A: Type](str: String): Unknown =>: A =

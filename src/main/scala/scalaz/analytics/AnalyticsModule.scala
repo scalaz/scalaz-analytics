@@ -64,6 +64,17 @@ trait AnalyticsModule {
   implicit val doubleType: Type[Double]
   implicit val doubleNumeric: Numeric[Double]
 
+  implicit val decimalType: Type[BigDecimal]
+  implicit val decimalNumeric: Numeric[BigDecimal]
+
+  implicit val stringType: Type[String]
+  implicit val booleanType: Type[Boolean]
+  implicit val byteType: Type[Byte]
+  implicit val nullType: Type[scala.Null]
+  implicit val shortType: Type[Short]
+  implicit val timestampType: Type[java.time.LocalDateTime]
+  implicit val dateType: Type[java.time.LocalDate]
+
   implicit def tuple2Type[A: Type, B: Type]: Type[(A, B)]
 
   /**
@@ -196,6 +207,12 @@ trait AnalyticsModule {
   implicit def boolean[A](v: scala.Boolean): A =>: Boolean
   implicit def decimal[A](v: scala.BigDecimal): A =>: BigDecimal
   implicit def string[A](v: scala.Predef.String): A =>: String
+  implicit def boolean[A](v: scala.Boolean): A =>: String
+  implicit def byte[A](v: scala.Byte): A =>: Byte
+  implicit def `null`[A](v: Null): A =>: Null
+  implicit def short[A](v: scala.Short): A =>: Short
+  implicit def timestamp[A](v: java.time.LocalDateTime): A =>: java.sql.Timestamp
+  implicit def date[A](v: java.time.LocalDate): A =>: java.sql.Date
 
   val setOps: Ops[Dataset]
   val streamOps: Ops[DataStream]
