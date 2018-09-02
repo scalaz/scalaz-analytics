@@ -10,9 +10,9 @@ import scala.language.implicitConversions
 trait AnalyticsModule {
 
   /**
-   * An abstract Dataset
+   * An abstract DataSet
    */
-  type Dataset[A]
+  type DataSet[A]
 
   /**
    * An abstract DataStream.
@@ -20,7 +20,7 @@ trait AnalyticsModule {
   type DataStream[A]
 
   /**
-   * A window is a way to specify a view on a DataStream/Dataset
+   * A window is a way to specify a view on a DataStream/DataSet
    */
   sealed trait Window
 
@@ -97,12 +97,12 @@ trait AnalyticsModule {
   }
 
   /**
-   * The dataset/datastream operations of scalaz-analytics
+   * The DataSet/DataStream operations of scalaz-analytics
    */
   trait Ops[F[_]] {
     // Unbounded
     def map[A, B](ds: F[A])(f: A =>: B): F[B]
-    def filter[A, B](ds: F[A])(f: A =>: Boolean): F[A]
+    def filter[A](ds: F[A])(f: A =>: Boolean): F[A]
 
     // Bounded
     def fold[A, B](ds: F[A])(window: Window)(initial: A =>: B)(f: (B, A) =>: B): F[B]
@@ -149,20 +149,20 @@ trait AnalyticsModule {
   }
 
   /**
-   * A DSL for building the Dataset data structure
+   * A DSL for building the DataSet data structure
    */
-  implicit class DatasetSyntax[A](ds: Dataset[A])(implicit A: Type[A]) {
+  implicit class DataSetSyntax[A](ds: DataSet[A])(implicit A: Type[A]) {
 
-    def map[B: Type](f: (A =>: A) => (A =>: B)): Dataset[B] =
+    def map[B: Type](f: (A =>: A) => (A =>: B)): DataSet[B] =
       setOps.map(ds)(f(stdLib.id))
 
-    def filter(f: (A =>: A) => (A =>: Boolean)): Dataset[A] =
+    def filter(f: (A =>: A) => (A =>: Boolean)): DataSet[A] =
       setOps.filter(ds)(f(stdLib.id))
 
-    def fold[B: Type](init: A =>: B)(f: (B, A) =>: B): Dataset[B] =
+    def fold[B: Type](init: A =>: B)(f: (B, A) =>: B): DataSet[B] =
       setOps.fold(ds)(Window.GlobalWindow())(init)(f)
 
-    def distinct: Dataset[A] =
+    def distinct: DataSet[A] =
       setOps.distinct(ds)(Window.GlobalWindow())
   }
 
@@ -185,9 +185,9 @@ trait AnalyticsModule {
   }
 
   /**
-   * Create an empty Dataset of type A
+   * Create an empty DataSet of type A
    */
-  def empty[A: Type]: Dataset[A]
+  def empty[A: Type]: DataSet[A]
 
   /**
    * Create an empty DataStream of type A
@@ -208,7 +208,7 @@ trait AnalyticsModule {
   implicit def timestamp[A](v: java.time.LocalDateTime): A =>: java.sql.Timestamp
   implicit def date[A](v: java.time.LocalDate): A =>: java.sql.Date
 
-  val setOps: Ops[Dataset]
+  val setOps: Ops[DataSet]
   val streamOps: Ops[DataStream]
   val stdLib: StandardLibrary
 
@@ -218,12 +218,12 @@ trait AnalyticsModule {
   def column[A: Type](str: scala.Predef.String): Unknown =>: A
 
   /**
-   * Loads a [[Dataset]] without type information
+   * Loads a [[DataSet]] without type information
    */
-  def load(path: String): Dataset[Unknown]
+  def load(path: String): DataSet[Unknown]
 
   /**
-   * Execute the [[DataStream]] or [[Dataset]]
+   * Execute the [[DataStream]] or [[DataSet]]
    */
   def run[A](d: DataStream[A]): IO[Error, Seq[A]]
 }

@@ -12,7 +12,7 @@ object SimpleExample {
     println(ds2)
   }
 
-  val ds1: Dataset[Int] =
+  val ds1: DataSet[Int] =
     empty[Int]
       .map(i => i * 7)
       .distinct

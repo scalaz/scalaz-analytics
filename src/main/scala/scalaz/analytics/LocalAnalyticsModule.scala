@@ -8,7 +8,7 @@ import java.time.{ LocalDate, LocalDateTime }
  * A non distributed implementation of Analytics Module
  */
 trait LocalAnalyticsModule extends AnalyticsModule {
-  override type Dataset[A]    = LocalDataStream
+  override type DataSet[A]    = LocalDataStream
   override type DataStream[A] = LocalDataStream
   override type Type[A]       = LocalType[A]
   override type Unknown       = UnknownType
@@ -117,10 +117,10 @@ trait LocalAnalyticsModule extends AnalyticsModule {
     case class Distinct(d: LocalDataStream, window: Window) extends LocalDataStream
   }
 
-  private val ops: Ops[Dataset] = new Ops[Dataset] {
+  private val ops: Ops[DataSet] = new Ops[DataSet] {
     override def map[A, B](ds: LocalDataStream)(f: A =>: B): LocalDataStream =
       LocalDataStream.Map(ds, f)
-    override def filter[A, B](ds: LocalDataStream)(f: A =>: Boolean): LocalDataStream =
+    override def filter[A](ds: LocalDataStream)(f: A =>: Boolean): LocalDataStream =
       LocalDataStream.Filter(ds, f)
 
     override def fold[A, B](ds: LocalDataStream)(window: Window)(initial: A =>: B)(
@@ -130,7 +130,7 @@ trait LocalAnalyticsModule extends AnalyticsModule {
       LocalDataStream.Distinct(ds, window)
   }
 
-  override val setOps: Ops[Dataset]       = ops
+  override val setOps: Ops[DataSet]       = ops
   override val streamOps: Ops[DataStream] = ops
 
   /**
