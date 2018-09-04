@@ -112,13 +112,18 @@ trait AnalyticsModule {
   /**
    * The standard library of scalaz-analytics.
    */
-  trait StandardLibrary {
+  trait StandardLibrary extends TupleLibrary {
     def id[A: Type]: A =>: A
     def compose[A, B, C](f: B =>: C, g: A =>: B): A =>: C
     def andThen[A, B, C](f: A =>: B, g: B =>: C): A =>: C
     def fanOut[A, B, C](fst: A =>: B, snd: A =>: C): A =>: (B, C)
     def split[A, B, C, D](f: A =>: B, g: C =>: D): (A, C) =>: (B, D)
     def product[A, B](fab: A =>: B): (A, A) =>: (B, B)
+  }
+
+  trait TupleLibrary {
+    def fst[A: Type, B]: (A, B) =>: A
+    def snd[A, B: Type]: (A, B) =>: B
   }
 
   trait Numeric[A] {
@@ -184,6 +189,15 @@ trait AnalyticsModule {
       streamOps.distinct(ds)(window)
   }
 
+  implicit class TupleSyntax[A, B, C](t: A =>: (B, C)) {
+
+    def _1(implicit ev: Type[B]): A =>: B =
+      stdLib.compose[A, (B, C), B](stdLib.fst, t)
+
+    def _2(implicit ev: Type[C]): A =>: C =
+      stdLib.compose[A, (B, C), C](stdLib.snd, t)
+  }
+
   /**
    * Create an empty DataSet of type A
    */
@@ -207,6 +221,18 @@ trait AnalyticsModule {
   implicit def short[A](v: scala.Short): A =>: Short
   implicit def instant[A](v: java.time.Instant): A =>: java.time.Instant
   implicit def localDate[A](v: java.time.LocalDate): A =>: java.time.LocalDate
+  implicit def tuple2[A, B, C](t: (A =>: B, A =>: C)): A =>: (B, C)
+
+  implicit def tuple2Lift[A, B, C](
+    t: (B, C)
+  )(implicit ev1: B => A =>: B, ev2: C => A =>: C): A =>: (B, C) =
+    tuple2((ev1(t._1), ev2(t._2)))
+
+  implicit def tuple2Lift1[A, B, C](t: (A =>: B, C))(implicit ev: C => A =>: C): A =>: (B, C) =
+    tuple2((t._1, ev(t._2)))
+
+  implicit def tuple2Lift2[A, B, C](t: (B, A =>: C))(implicit ev1: B => A =>: B): A =>: (B, C) =
+    tuple2((ev1(t._1), t._2))
 
   val setOps: Ops[DataSet]
   val streamOps: Ops[DataStream]

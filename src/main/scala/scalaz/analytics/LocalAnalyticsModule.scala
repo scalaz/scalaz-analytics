@@ -123,9 +123,10 @@ trait LocalAnalyticsModule extends AnalyticsModule {
     override def filter[A](ds: LocalDataStream)(f: A =>: Boolean): LocalDataStream =
       LocalDataStream.Filter(ds, f)
 
-    override def fold[A, B](ds: LocalDataStream)(window: Window)(initial: A =>: B)(
-      f: (B, A) =>: B
-    ): LocalDataStream = LocalDataStream.Fold(ds, initial, f, window)
+    override def fold[A, B](
+      ds: LocalDataStream
+    )(window: Window)(initial: A =>: B)(f: (B, A) =>: B): LocalDataStream =
+      LocalDataStream.Fold(ds, initial, f, window)
     override def distinct[A](ds: LocalDataStream)(window: Window): LocalDataStream =
       LocalDataStream.Distinct(ds, window)
   }
@@ -151,6 +152,7 @@ trait LocalAnalyticsModule extends AnalyticsModule {
     case class Split(f: RowFunction, g: RowFunction)          extends RowFunction
     case class Product(fab: RowFunction)                      extends RowFunction
     case class Column(colName: String, rType: Reified)        extends RowFunction
+    case class ExtractNth(reified: Reified, n: Int)           extends RowFunction
 
     // constants
     case class IntLiteral(value: Int)             extends RowFunction
@@ -181,6 +183,10 @@ trait LocalAnalyticsModule extends AnalyticsModule {
       RowFunction.Split(f, g)
 
     override def product[A, B](fab: A =>: B): (A, A) =>: (B, B) = RowFunction.Product(fab)
+
+    override def fst[A: Type, B]: (A, B) =>: A = RowFunction.ExtractNth(Type[A].reified, 0)
+
+    override def snd[A, B: Type]: (A, B) =>: B = RowFunction.ExtractNth(Type[B].reified, 1)
   }
 
   override def empty[A: Type]: LocalDataStream = LocalDataStream.Empty(LocalType.typeOf[A])
@@ -202,6 +208,8 @@ trait LocalAnalyticsModule extends AnalyticsModule {
   implicit override def instant[A](v: Instant): A =>: Instant       = RowFunction.InstantLiteral(v)
   implicit override def localDate[A](v: LocalDate): A =>: LocalDate =
     RowFunction.LocalDateLiteral(v)
+  implicit override def tuple2[A, B, C](t: (A =>: B, A =>: C)): A =>: (B, C) =
+    RowFunction.FanOut(t._1, t._2)
 
   // todo this needs more thought
   override def column[A: Type](str: String): Unknown =>: A =
