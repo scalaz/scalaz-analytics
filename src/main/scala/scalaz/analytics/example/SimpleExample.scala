@@ -7,11 +7,18 @@ import scalaz.analytics.local._
  */
 object SimpleExample {
 
-  def main(args: Array[String]): Unit =
-    println(ds)
+  def main(args: Array[String]): Unit = {
+    println(ds1)
+    println(ds2)
+  }
 
-  val ds: DataStream[Int] =
+  val ds1: DataSet[Int] =
     empty[Int]
       .map(i => i * 7)
-      .distinctBy(i => i % 2)
+      .distinct
+
+  val ds2: DataStream[Int] =
+    emptyStream[Int]
+      .filter(i => i + 1 > 0)
+      .distinct(Window.FixedTimeWindow())
 }

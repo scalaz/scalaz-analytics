@@ -1,6 +1,7 @@
 package scalaz.analytics
 
 import scalaz.zio.IO
+
 import scala.language.implicitConversions
 
 /**
@@ -9,9 +10,27 @@ import scala.language.implicitConversions
 trait AnalyticsModule {
 
   /**
+   * An abstract DataSet
+   */
+  type DataSet[A]
+
+  /**
    * An abstract DataStream.
    */
-  type DataStream[_]
+  type DataStream[A]
+
+  /**
+   * A window is a way to specify a view on a DataStream/DataSet
+   */
+  sealed trait Window
+
+  object Window {
+    case class FixedTimeWindow()   extends Window
+    case class SlidingTimeWindow() extends Window
+    case class SessionWindow()     extends Window
+    // For internal use only
+    case class GlobalWindow private () extends Window
+  }
 
   /**
    * The set of types that are representable in this module.
@@ -78,16 +97,16 @@ trait AnalyticsModule {
   }
 
   /**
-   * The Operations supported by the core DataStream abstraction in scalaz-analytics.
+   * The DataSet/DataStream operations of scalaz-analytics
    */
-  trait SetOperations {
-    def union[A](l: DataStream[A], r: DataStream[A]): DataStream[A]
-    def intersect[A](l: DataStream[A], r: DataStream[A]): DataStream[A]
-    def except[A](l: DataStream[A], r: DataStream[A]): DataStream[A]
-    def distinct[A](d: DataStream[A]): DataStream[A]
-    def map[A, B](d: DataStream[A])(f: A =>: B): DataStream[B]
-    def sort[A](d: DataStream[A]): DataStream[A]
-    def distinctBy[A, B](d: DataStream[A])(by: A =>: B): DataStream[A]
+  trait Ops[F[_]] {
+    // Unbounded
+    def map[A, B](ds: F[A])(f: A =>: B): F[B]
+    def filter[A](ds: F[A])(f: A =>: Boolean): F[A]
+
+    // Bounded
+    def fold[A, B](ds: F[A])(window: Window)(initial: A =>: B)(f: (B, A) =>: B): F[B]
+    def distinct[A](ds: F[A])(window: Window): F[A]
   }
 
   /**
@@ -109,6 +128,8 @@ trait AnalyticsModule {
     def sum: (A, A) =>: A
     def diff: (A, A) =>: A
     def mod: (A, A) =>: A
+
+    def greaterThan: (A, A) =>: Boolean
   }
 
   object Numeric {
@@ -123,24 +144,55 @@ trait AnalyticsModule {
     def + (r: A =>: B)(implicit B: Numeric[B]): A =>: B = (l &&& r) >>> B.sum
     def - (r: A =>: B)(implicit B: Numeric[B]): A =>: B = (l &&& r) >>> B.diff
     def % (r: A =>: B)(implicit B: Numeric[B]): A =>: B = (l &&& r) >>> B.mod
+
+    def > (r: A =>: B)(implicit B: Numeric[B]): A =>: Boolean = (l &&& r) >>> B.greaterThan
   }
 
   /**
-   * A DSL for building the DataStream data structure in a manner familiar to libraries like Spark/Flink etc
+   * A DSL for building the DataSet data structure
    */
-  implicit class DataStreamSyntax[A](d: DataStream[A])(implicit A: Type[A]) {
+  implicit class DataSetSyntax[A](ds: DataSet[A])(implicit A: Type[A]) {
+
+    def map[B: Type](f: (A =>: A) => (A =>: B)): DataSet[B] =
+      setOps.map(ds)(f(stdLib.id))
+
+    def filter(f: (A =>: A) => (A =>: Boolean)): DataSet[A] =
+      setOps.filter(ds)(f(stdLib.id))
+
+    def fold[B: Type](init: A =>: B)(f: (B, A) =>: B): DataSet[B] =
+      setOps.fold(ds)(Window.GlobalWindow())(init)(f)
+
+    def distinct: DataSet[A] =
+      setOps.distinct(ds)(Window.GlobalWindow())
+  }
+
+  /**
+   * A DSL for building the DataStream data structure
+   */
+  implicit class DataStreamSyntax[A](ds: DataStream[A])(implicit A: Type[A]) {
 
     def map[B: Type](f: (A =>: A) => (A =>: B)): DataStream[B] =
-      setOps.map(d)(f(stdLib.id))
+      streamOps.map(ds)(f(stdLib.id))
 
-    def distinctBy[B: Type](f: (A =>: A) => (A =>: B)): DataStream[A] =
-      setOps.distinctBy(d)(f(stdLib.id))
+    def filter(f: (A =>: A) => (A =>: Boolean)): DataStream[A] =
+      streamOps.filter(ds)(f(stdLib.id))
+
+    def fold[B: Type](window: Window)(init: A =>: B)(f: (B, A) =>: B): DataStream[B] =
+      streamOps.fold(ds)(window)(init)(f)
+
+    def distinct(window: Window): DataStream[A] =
+      streamOps.distinct(ds)(window)
   }
+
+  /**
+   * Create an empty DataSet of type A
+   */
+  def empty[A: Type]: DataSet[A]
 
   /**
    * Create an empty DataStream of type A
    */
-  def empty[A: Type]: DataStream[A]
+  def emptyStream[A: Type]: DataStream[A]
 
   // Entry points for various supported scala types into the Analytics Language
   implicit def int[A](v: scala.Int): A =>: Int
@@ -149,14 +201,15 @@ trait AnalyticsModule {
   implicit def double[A](v: scala.Double): A =>: Double
   implicit def decimal[A](v: scala.BigDecimal): A =>: BigDecimal
   implicit def string[A](v: scala.Predef.String): A =>: String
-  implicit def boolean[A](v: scala.Boolean): A =>: String
+  implicit def boolean[A](v: scala.Boolean): A =>: Boolean
   implicit def byte[A](v: scala.Byte): A =>: Byte
   implicit def `null`[A](v: Null): A =>: Null
   implicit def short[A](v: scala.Short): A =>: Short
   implicit def instant[A](v: java.time.Instant): A =>: java.time.Instant
   implicit def localDate[A](v: java.time.LocalDate): A =>: java.time.LocalDate
 
-  val setOps: SetOperations
+  val setOps: Ops[DataSet]
+  val streamOps: Ops[DataStream]
   val stdLib: StandardLibrary
 
   /**
@@ -165,12 +218,12 @@ trait AnalyticsModule {
   def column[A: Type](str: scala.Predef.String): Unknown =>: A
 
   /**
-   * Loads a [[DataStream]] without type information
+   * Loads a [[DataSet]] without type information
    */
-  def load(path: String): DataStream[Unknown]
+  def load(path: String): DataSet[Unknown]
 
   /**
-   * Execute the [[DataStream]]
+   * Execute the [[DataStream]] or [[DataSet]]
    */
   def run[A](d: DataStream[A]): IO[Error, Seq[A]]
 }
