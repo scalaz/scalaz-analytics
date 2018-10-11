@@ -26,7 +26,7 @@ addCommandAlias("check", "all scalafmtSbtCheck scalafmtCheck test:scalafmtCheck"
 
 libraryDependencies ++= Seq(
   "org.scalaz" %% "scalaz-core" % "7.2.25",
-  "org.scalaz" %% "scalaz-zio"  % "0.1-SNAPSHOT"
+  "org.scalaz" %% "scalaz-zio"  % "0.2.11"
 )
 resolvers += Resolver.sonatypeRepo("snapshots")
 
