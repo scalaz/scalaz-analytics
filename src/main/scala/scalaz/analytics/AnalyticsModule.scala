@@ -72,7 +72,6 @@ trait AnalyticsModule {
   implicit val nullType: Type[scala.Null]
   implicit val shortType: Type[Short]
   implicit val instantType: Type[java.time.Instant]
-  implicit val dateType: Type[java.time.LocalDate]
 
   implicit def tuple2Type[A: Type, B: Type]: Type[(A, B)]
 
@@ -206,7 +205,6 @@ trait AnalyticsModule {
   implicit def `null`[A](v: Null): A =>: Null
   implicit def short[A](v: scala.Short): A =>: Short
   implicit def instant[A](v: java.time.Instant): A =>: java.time.Instant
-  implicit def localDate[A](v: java.time.LocalDate): A =>: java.time.LocalDate
 
   val setOps: Ops[DataSet]
   val streamOps: Ops[DataStream]
