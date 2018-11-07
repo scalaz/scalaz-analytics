@@ -112,7 +112,7 @@ trait AnalyticsModule {
   /**
    * The standard library of scalaz-analytics.
    */
-  trait StandardLibrary extends TupleLibrary {
+  trait StandardLibrary extends TupleLibrary with StringLibrary {
     def id[A: Type]: A =>: A
     def compose[A, B, C](f: B =>: C, g: A =>: B): A =>: C
     def andThen[A, B, C](f: A =>: B, g: B =>: C): A =>: C
@@ -124,6 +124,11 @@ trait AnalyticsModule {
   trait TupleLibrary {
     def fst[A: Type, B]: (A, B) =>: A
     def snd[A, B: Type]: (A, B) =>: B
+  }
+
+  trait StringLibrary {
+    def strSplit(pattern: String): String =>: DataSet[String]
+    def strConcat: (String, String) =>: String
   }
 
   trait Numeric[A] {

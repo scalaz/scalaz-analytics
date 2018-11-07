@@ -153,6 +153,8 @@ trait LocalAnalyticsModule extends AnalyticsModule {
     case class Product(fab: RowFunction)                      extends RowFunction
     case class Column(colName: String, rType: Reified)        extends RowFunction
     case class ExtractNth(reified: Reified, n: Int)           extends RowFunction
+    case class StrSplit(pattern: String)                      extends RowFunction
+    case object StrConcat                                     extends RowFunction
 
     // constants
     case class IntLiteral(value: Int)             extends RowFunction
@@ -187,6 +189,11 @@ trait LocalAnalyticsModule extends AnalyticsModule {
     override def fst[A: Type, B]: (A, B) =>: A = RowFunction.ExtractNth(Type[A].reified, 0)
 
     override def snd[A, B: Type]: (A, B) =>: B = RowFunction.ExtractNth(Type[B].reified, 1)
+
+    override def strSplit(pattern: String): String =>: DataSet[String] =
+      RowFunction.StrSplit(pattern)
+
+    override def strConcat: (String, String) =>: String = RowFunction.StrConcat
   }
 
   override def empty[A: Type]: LocalDataStream = LocalDataStream.Empty(LocalType.typeOf[A])
