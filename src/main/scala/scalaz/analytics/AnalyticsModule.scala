@@ -131,6 +131,14 @@ trait AnalyticsModule {
     def strConcat: (String, String) =>: String
   }
 
+  /**
+   * A DSL for string operations
+   */
+  implicit class StringSyntax[A](val l: A =>: String) {
+    def split(pattern: String): A =>: DataSet[String] = l >>> stdLib.strSplit(pattern)
+    def concat(r: A =>: String): A =>: String = (l &&& r) >>> stdLib.strConcat
+  }
+
   trait Numeric[A] {
     def typeOf: Type[A] // underlying repr
 
