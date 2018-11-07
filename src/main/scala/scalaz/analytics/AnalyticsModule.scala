@@ -102,6 +102,7 @@ trait AnalyticsModule {
   trait Ops[F[_]] {
     // Unbounded
     def map[A, B](ds: F[A])(f: A =>: B): F[B]
+    def flatMap[A, B](ds: F[A])(f: A =>: DataSet[B]): F[B]
     def filter[A](ds: F[A])(f: A =>: Boolean): F[A]
 
     // Bounded
@@ -174,6 +175,9 @@ trait AnalyticsModule {
     def map[B: Type](f: (A =>: A) => (A =>: B)): DataSet[B] =
       setOps.map(ds)(f(stdLib.id))
 
+    def flatMap[B: Type](f: (A =>: A) => (A =>: DataSet[B])) =
+      setOps.flatMap(ds)(f(stdLib.id))
+
     def filter(f: (A =>: A) => (A =>: Boolean)): DataSet[A] =
       setOps.filter(ds)(f(stdLib.id))
 
@@ -191,6 +195,9 @@ trait AnalyticsModule {
 
     def map[B: Type](f: (A =>: A) => (A =>: B)): DataStream[B] =
       streamOps.map(ds)(f(stdLib.id))
+
+    def flatMap[B: Type](f: (A =>: A) => (A =>: DataSet[B])) =
+      streamOps.flatMap(ds)(f(stdLib.id))
 
     def filter(f: (A =>: A) => (A =>: Boolean)): DataStream[A] =
       streamOps.filter(ds)(f(stdLib.id))

@@ -109,8 +109,9 @@ trait LocalAnalyticsModule extends AnalyticsModule {
   object LocalDataStream {
     case class Empty(rType: Reified) extends LocalDataStream
 
-    case class Map(d: LocalDataStream, f: RowFunction)    extends LocalDataStream
-    case class Filter(d: LocalDataStream, f: RowFunction) extends LocalDataStream
+    case class Map(d: LocalDataStream, f: RowFunction)     extends LocalDataStream
+    case class FlatMap(d: LocalDataStream, f: RowFunction) extends LocalDataStream
+    case class Filter(d: LocalDataStream, f: RowFunction)  extends LocalDataStream
 
     case class Fold(d: LocalDataStream, initial: RowFunction, f: RowFunction, window: Window)
         extends LocalDataStream
@@ -120,6 +121,8 @@ trait LocalAnalyticsModule extends AnalyticsModule {
   private val ops: Ops[DataSet] = new Ops[DataSet] {
     override def map[A, B](ds: LocalDataStream)(f: A =>: B): LocalDataStream =
       LocalDataStream.Map(ds, f)
+    override def flatMap[A, B](ds: LocalDataStream)(f: A =>: DataSet[B]): LocalDataStream =
+      LocalDataStream.FlatMap(ds, f)
     override def filter[A](ds: LocalDataStream)(f: A =>: Boolean): LocalDataStream =
       LocalDataStream.Filter(ds, f)
 
