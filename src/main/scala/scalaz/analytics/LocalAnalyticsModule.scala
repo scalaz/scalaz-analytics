@@ -112,9 +112,24 @@ trait LocalAnalyticsModule extends AnalyticsModule {
     case class Map(d: LocalDataStream, f: RowFunction)     extends LocalDataStream
     case class FlatMap(d: LocalDataStream, f: RowFunction) extends LocalDataStream
     case class Filter(d: LocalDataStream, f: RowFunction)  extends LocalDataStream
+    case class Scan(d: LocalDataStream, initial: RowFunction, f: RowFunction)
+        extends LocalDataStream
+    case class ScanAggregateBy(
+      d: LocalDataStream,
+      groupBy: RowFunction,
+      initial: RowFunction,
+      f: RowFunction
+    ) extends LocalDataStream
 
     case class Fold(d: LocalDataStream, initial: RowFunction, f: RowFunction, window: Window)
         extends LocalDataStream
+    case class AggregateBy(
+      d: LocalDataStream,
+      groupBy: RowFunction,
+      initial: RowFunction,
+      f: RowFunction,
+      window: Window
+    ) extends LocalDataStream
     case class Distinct(d: LocalDataStream, window: Window) extends LocalDataStream
   }
 
@@ -125,11 +140,23 @@ trait LocalAnalyticsModule extends AnalyticsModule {
       LocalDataStream.FlatMap(ds, f)
     override def filter[A](ds: LocalDataStream)(f: A =>: Boolean): LocalDataStream =
       LocalDataStream.Filter(ds, f)
+    override def scan[A, B](
+      ds: LocalDataStream
+    )(initial: Unit =>: B)(f: (B, A) =>: B): LocalDataStream =
+      LocalDataStream.Scan(ds, initial, f)
+    override def scanAggregateBy[A, K, V](
+      ds: LocalDataStream
+    )(g: A =>: K)(initial: Unit =>: V)(f: (V, A) =>: V): LocalDataStream =
+      LocalDataStream.ScanAggregateBy(ds, g, initial, f)
 
     override def fold[A, B](
       ds: LocalDataStream
     )(window: Window)(initial: A =>: B)(f: (B, A) =>: B): LocalDataStream =
       LocalDataStream.Fold(ds, initial, f, window)
+    override def aggregateBy[A, K, V](
+      ds: LocalDataStream
+    )(window: Window)(g: A =>: K)(initial: Unit =>: V)(f: (V, A) =>: V): LocalDataStream =
+      LocalDataStream.AggregateBy(ds, g, initial, f, window)
     override def distinct[A](ds: LocalDataStream)(window: Window): LocalDataStream =
       LocalDataStream.Distinct(ds, window)
   }

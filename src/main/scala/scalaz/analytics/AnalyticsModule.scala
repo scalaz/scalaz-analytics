@@ -100,13 +100,26 @@ trait AnalyticsModule {
    * The DataSet/DataStream operations of scalaz-analytics
    */
   trait Ops[F[_]] {
-    // Unbounded
+    // Unbounded dataset ops
+    // (These ops require only bounded space, even with unbounded data)
     def map[A, B](ds: F[A])(f: A =>: B): F[B]
     def flatMap[A, B](ds: F[A])(f: A =>: DataSet[B]): F[B]
     def filter[A](ds: F[A])(f: A =>: Boolean): F[A]
+    // Streaming aggregations
+    // (These ops produce cumulative results, some may require unbounded space)
+    def scan[A, B](ds: F[A])(initial: Unit =>: B)(f: (B, A) =>: B): F[B]
 
-    // Bounded
-    def fold[A, B](ds: F[A])(window: Window)(initial: A =>: B)(f: (B, A) =>: B): F[B]
+    def scanAggregateBy[A, K, V](ds: F[A])(g: A =>: K)(initial: Unit =>: V)(
+      f: (V, A) =>: V
+    ): F[(K, V)]
+
+    // Bounded dataset ops
+    // (These ops can only be performed on bounded subsets of data)
+    def fold[A, B](ds: F[A])(window: Window)(initial: Unit =>: B)(f: (B, A) =>: B): F[B]
+
+    def aggregateBy[A, K, V](ds: F[A])(window: Window)(g: A =>: K)(initial: Unit =>: V)(
+      f: (V, A) =>: V
+    ): F[(K, V)]
     def distinct[A](ds: F[A])(window: Window): F[A]
   }
 
@@ -175,14 +188,37 @@ trait AnalyticsModule {
     def map[B: Type](f: (A =>: A) => (A =>: B)): DataSet[B] =
       setOps.map(ds)(f(stdLib.id))
 
-    def flatMap[B: Type](f: (A =>: A) => (A =>: DataSet[B])) =
+    def flatMap[B: Type](f: (A =>: A) => (A =>: DataSet[B])): DataSet[B] =
       setOps.flatMap(ds)(f(stdLib.id))
 
     def filter(f: (A =>: A) => (A =>: Boolean)): DataSet[A] =
       setOps.filter(ds)(f(stdLib.id))
 
-    def fold[B: Type](init: A =>: B)(f: (B, A) =>: B): DataSet[B] =
-      setOps.fold(ds)(Window.GlobalWindow())(init)(f)
+    def scan[B: Type](initial: Unit =>: B)(f: ((B, A) =>: (B, A)) => ((B, A) =>: B)): DataSet[B] =
+      setOps.scan(ds)(initial)(f(stdLib.id))
+
+    def scanAggregate[V: Type](
+      initial: Unit =>: V
+    )(f: ((V, A) =>: (V, A)) => ((V, A) =>: V)): DataSet[(A, V)] =
+      scanAggregateBy(identity)(initial)(f)
+
+    def scanAggregateBy[K, V: Type](
+      g: (A =>: A) => (A =>: K)
+    )(initial: Unit =>: V)(f: ((V, A) =>: (V, A)) => ((V, A) =>: V)): DataSet[(K, V)] =
+      setOps.scanAggregateBy(ds)(g(stdLib.id))(initial)(f(stdLib.id))
+
+    def fold[B: Type](init: Unit =>: B)(f: ((B, A) =>: (B, A)) => ((B, A) =>: B)): DataSet[B] =
+      setOps.fold(ds)(Window.GlobalWindow())(init)(f(stdLib.id))
+
+    def aggregate[V: Type](
+      initial: Unit =>: V
+    )(f: ((V, A) =>: (V, A)) => ((V, A) =>: V)): DataSet[(A, V)] =
+      aggregateBy(identity)(initial)(f)
+
+    def aggregateBy[K, V: Type](
+      g: (A =>: A) => (A =>: K)
+    )(initial: Unit =>: V)(f: ((V, A) =>: (V, A)) => ((V, A) =>: V)): DataSet[(K, V)] =
+      setOps.aggregateBy(ds)(Window.GlobalWindow())(g(stdLib.id))(initial)(f(stdLib.id))
 
     def distinct: DataSet[A] =
       setOps.distinct(ds)(Window.GlobalWindow())
@@ -196,14 +232,41 @@ trait AnalyticsModule {
     def map[B: Type](f: (A =>: A) => (A =>: B)): DataStream[B] =
       streamOps.map(ds)(f(stdLib.id))
 
-    def flatMap[B: Type](f: (A =>: A) => (A =>: DataSet[B])) =
+    def flatMap[B: Type](f: (A =>: A) => (A =>: DataSet[B])): DataStream[B] =
       streamOps.flatMap(ds)(f(stdLib.id))
 
     def filter(f: (A =>: A) => (A =>: Boolean)): DataStream[A] =
       streamOps.filter(ds)(f(stdLib.id))
 
-    def fold[B: Type](window: Window)(init: A =>: B)(f: (B, A) =>: B): DataStream[B] =
-      streamOps.fold(ds)(window)(init)(f)
+    def scan[B: Type](
+      initial: Unit =>: B
+    )(f: ((B, A) =>: (B, A)) => ((B, A) =>: B)): DataStream[B] =
+      streamOps.scan(ds)(initial)(f(stdLib.id))
+
+    def scanAggregate[V: Type](
+      initial: Unit =>: V
+    )(f: ((V, A) =>: (V, A)) => ((V, A) =>: V)): DataStream[(A, V)] =
+      scanAggregateBy(identity)(initial)(f)
+
+    def scanAggregateBy[K, V: Type](
+      g: (A =>: A) => (A =>: K)
+    )(initial: Unit =>: V)(f: ((V, A) =>: (V, A)) => ((V, A) =>: V)): DataStream[(K, V)] =
+      streamOps.scanAggregateBy(ds)(g(stdLib.id))(initial)(f(stdLib.id))
+
+    def fold[B: Type](
+      window: Window
+    )(init: Unit =>: B)(f: ((B, A) =>: (B, A)) => ((B, A) =>: B)): DataStream[B] =
+      streamOps.fold(ds)(window)(init)(f(stdLib.id))
+
+    def aggregate[V: Type](
+      window: Window
+    )(initial: Unit =>: V)(f: ((V, A) =>: (V, A)) => ((V, A) =>: V)): DataStream[(A, V)] =
+      aggregateBy(window)(identity)(initial)(f)
+
+    def aggregateBy[K, V: Type](window: Window)(
+      g: (A =>: A) => (A =>: K)
+    )(initial: Unit =>: V)(f: ((V, A) =>: (V, A)) => ((V, A) =>: V)): DataStream[(K, V)] =
+      streamOps.aggregateBy(ds)(window)(g(stdLib.id))(initial)(f(stdLib.id))
 
     def distinct(window: Window): DataStream[A] =
       streamOps.distinct(ds)(window)
