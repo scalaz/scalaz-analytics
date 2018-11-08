@@ -51,5 +51,5 @@ object SimpleExample {
     countDistinct(words(lines))
 
   def words(lines: DataSet[String]): DataSet[String] =
-    lines flatMap (_.split(" "))
+    lines.flatMap(_.split(" "))
 }

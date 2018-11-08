@@ -150,7 +150,7 @@ trait AnalyticsModule {
    */
   implicit class StringSyntax[A](val l: A =>: String) {
     def split(pattern: String): A =>: DataSet[String] = l >>> stdLib.strSplit(pattern)
-    def concat(r: A =>: String): A =>: String = (l &&& r) >>> stdLib.strConcat
+    def concat(r: A =>: String): A =>: String         = (l &&& r) >>> stdLib.strConcat
   }
 
   trait Numeric[A] {
