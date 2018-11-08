@@ -109,23 +109,54 @@ trait LocalAnalyticsModule extends AnalyticsModule {
   object LocalDataStream {
     case class Empty(rType: Reified) extends LocalDataStream
 
-    case class Map(d: LocalDataStream, f: RowFunction)    extends LocalDataStream
-    case class Filter(d: LocalDataStream, f: RowFunction) extends LocalDataStream
+    case class Map(d: LocalDataStream, f: RowFunction)     extends LocalDataStream
+    case class FlatMap(d: LocalDataStream, f: RowFunction) extends LocalDataStream
+    case class Filter(d: LocalDataStream, f: RowFunction)  extends LocalDataStream
+    case class Scan(d: LocalDataStream, initial: RowFunction, f: RowFunction)
+        extends LocalDataStream
+    case class ScanAggregateBy(
+      d: LocalDataStream,
+      groupBy: RowFunction,
+      initial: RowFunction,
+      f: RowFunction
+    ) extends LocalDataStream
 
     case class Fold(d: LocalDataStream, initial: RowFunction, f: RowFunction, window: Window)
         extends LocalDataStream
+    case class AggregateBy(
+      d: LocalDataStream,
+      groupBy: RowFunction,
+      initial: RowFunction,
+      f: RowFunction,
+      window: Window
+    ) extends LocalDataStream
     case class Distinct(d: LocalDataStream, window: Window) extends LocalDataStream
   }
 
   private val ops: Ops[DataSet] = new Ops[DataSet] {
     override def map[A, B](ds: LocalDataStream)(f: A =>: B): LocalDataStream =
       LocalDataStream.Map(ds, f)
+    override def flatMap[A, B](ds: LocalDataStream)(f: A =>: DataSet[B]): LocalDataStream =
+      LocalDataStream.FlatMap(ds, f)
     override def filter[A](ds: LocalDataStream)(f: A =>: Boolean): LocalDataStream =
       LocalDataStream.Filter(ds, f)
+    override def scan[A, B](
+      ds: LocalDataStream
+    )(initial: Unit =>: B)(f: (B, A) =>: B): LocalDataStream =
+      LocalDataStream.Scan(ds, initial, f)
+    override def scanAggregateBy[A, K, V](
+      ds: LocalDataStream
+    )(g: A =>: K)(initial: Unit =>: V)(f: (V, A) =>: V): LocalDataStream =
+      LocalDataStream.ScanAggregateBy(ds, g, initial, f)
 
-    override def fold[A, B](ds: LocalDataStream)(window: Window)(initial: A =>: B)(
-      f: (B, A) =>: B
-    ): LocalDataStream = LocalDataStream.Fold(ds, initial, f, window)
+    override def fold[A, B](
+      ds: LocalDataStream
+    )(window: Window)(initial: A =>: B)(f: (B, A) =>: B): LocalDataStream =
+      LocalDataStream.Fold(ds, initial, f, window)
+    override def aggregateBy[A, K, V](
+      ds: LocalDataStream
+    )(window: Window)(g: A =>: K)(initial: Unit =>: V)(f: (V, A) =>: V): LocalDataStream =
+      LocalDataStream.AggregateBy(ds, g, initial, f, window)
     override def distinct[A](ds: LocalDataStream)(window: Window): LocalDataStream =
       LocalDataStream.Distinct(ds, window)
   }
@@ -151,6 +182,9 @@ trait LocalAnalyticsModule extends AnalyticsModule {
     case class Split(f: RowFunction, g: RowFunction)          extends RowFunction
     case class Product(fab: RowFunction)                      extends RowFunction
     case class Column(colName: String, rType: Reified)        extends RowFunction
+    case class ExtractNth(reified: Reified, n: Int)           extends RowFunction
+    case class StrSplit(pattern: String)                      extends RowFunction
+    case object StrConcat                                     extends RowFunction
 
     // constants
     case class IntLiteral(value: Int)             extends RowFunction
@@ -181,6 +215,15 @@ trait LocalAnalyticsModule extends AnalyticsModule {
       RowFunction.Split(f, g)
 
     override def product[A, B](fab: A =>: B): (A, A) =>: (B, B) = RowFunction.Product(fab)
+
+    override def fst[A: Type, B]: (A, B) =>: A = RowFunction.ExtractNth(Type[A].reified, 0)
+
+    override def snd[A, B: Type]: (A, B) =>: B = RowFunction.ExtractNth(Type[B].reified, 1)
+
+    override def strSplit(pattern: String): String =>: DataSet[String] =
+      RowFunction.StrSplit(pattern)
+
+    override def strConcat: (String, String) =>: String = RowFunction.StrConcat
   }
 
   override def empty[A: Type]: LocalDataStream = LocalDataStream.Empty(LocalType.typeOf[A])
@@ -202,6 +245,8 @@ trait LocalAnalyticsModule extends AnalyticsModule {
   implicit override def instant[A](v: Instant): A =>: Instant       = RowFunction.InstantLiteral(v)
   implicit override def localDate[A](v: LocalDate): A =>: LocalDate =
     RowFunction.LocalDateLiteral(v)
+  implicit override def tuple2[A, B, C](t: (A =>: B, A =>: C)): A =>: (B, C) =
+    RowFunction.FanOut(t._1, t._2)
 
   // todo this needs more thought
   override def column[A: Type](str: String): Unknown =>: A =
